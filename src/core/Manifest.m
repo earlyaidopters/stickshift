@@ -63,6 +63,26 @@ static NSSet *qualifiedVersions(AgentKind k) {
     return nil;
 }
 
+// Version drift policy. Agents ship patch releases weekly; the TUI vocabulary this
+// engine drives (commands, picker rows, dialogs, footers) is re-proven at runtime on
+// every shift, so version is a drift SIGNAL, not an identity gate. Exact and
+// same-major.minor versions are treated as known-good; an out-of-series version on
+// an authentic binary is driven with a logged warning (live 2026-07-13: the exact
+// pin refused codex 0.144.3 minutes after a routine update — its second false
+// refusal, against zero true saves).
++ (VersionMatch)matchForVersion:(NSString *)v kind:(AgentKind)kind {
+    if (!v.length) return VersionUnknown;
+    NSSet *qual = qualifiedVersions(kind);
+    if ([qual containsObject:v]) return VersionExact;
+    NSArray *vp = [v componentsSeparatedByString:@"."];
+    if (vp.count >= 2) {
+        NSString *series = [NSString stringWithFormat:@"%@.%@.", vp[0], vp[1]];
+        for (NSString *q in qual)
+            if ([q hasPrefix:series]) return VersionSameSeries;
+    }
+    return VersionDrift;
+}
+
 - (AgentIdentity *)identifyImage:(NSString *)imagePath kindHint:(AgentKind)hint {
     AgentIdentity *id_ = [AgentIdentity new];
     id_.imagePath = imagePath;
@@ -78,10 +98,14 @@ static NSSet *qualifiedVersions(AgentKind k) {
         else if ([team isEqualToString:teamForKind(AgentCodex)]) id_.kind = AgentCodex;
     }
     id_.version = [self versionFromImage:imagePath kind:id_.kind];
+    id_.versionMatch = [Manifest matchForVersion:id_.version kind:id_.kind];
+    // HARD gates: authentic signature, right team, right identifier, known kind,
+    // and a resolvable version (a missing package.json means we cannot even say
+    // what we are driving). Version DRIFT is not a hard gate — see matchForVersion.
     BOOL teamOk = [team isEqualToString:teamForKind(id_.kind)];
     BOOL idOk = [ident isEqualToString:codeIdForKind(id_.kind)];
-    BOOL verOk = id_.version && [qualifiedVersions(id_.kind) containsObject:id_.version];
-    id_.qualified = id_.signatureValid && teamOk && idOk && verOk && id_.kind != AgentUnknown;
+    id_.qualified = id_.signatureValid && teamOk && idOk
+                 && id_.kind != AgentUnknown && id_.versionMatch != VersionUnknown;
     return id_;
 }
 

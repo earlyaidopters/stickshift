@@ -164,7 +164,9 @@ static AttributionResult *fail(ShiftReason r, NSString *d) {
     if (invokingTty.length && [t.tty isEqualToString:invokingTty])
         return fail(ShiftSelfTarget, @"attributed pane is this CLI's own shell");
     if (!t.identity.qualified)
-        return fail(ShiftUnsupportedAgentVersion, ([NSString stringWithFormat:@"agent version %@ not qualified", t.identity.version ?: @"?"]));
+        return fail(ShiftUnsupportedAgentVersion, ([NSString stringWithFormat:
+            @"agent identity not qualified (sig=%d team=%@ id=%@ version=%@) — authentic signed builds of any version qualify",
+            t.identity.signatureValid, t.identity.teamId ?: @"?", t.identity.codeId ?: @"?", t.identity.version ?: @"unresolved"]));
 
     AttributionResult *ok = [AttributionResult new];
     ok.reason = ShiftOK; ok.target = t;

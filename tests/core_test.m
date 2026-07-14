@@ -566,6 +566,22 @@ int main(void) {
             [[NSFileManager defaultManager] removeItemAtPath:root error:nil];
         }
 
+        printf("\n== manifest: version drift policy ==\n");
+        // Version is a drift signal, not an identity gate (live 2026-07-13: the exact
+        // pin refused codex 0.144.3 minutes after a routine update). Identity
+        // (signature/team/id) stays hard; series and drift are tolerated.
+        check([Manifest matchForVersion:@"0.144.1" kind:AgentCodex] == VersionExact,
+              @"qualified version -> exact");
+        check([Manifest matchForVersion:@"0.144.3" kind:AgentCodex] == VersionSameSeries,
+              @"patch bump (0.144.3) -> same series (the live false refusal)");
+        check([Manifest matchForVersion:@"0.145.0" kind:AgentCodex] == VersionDrift,
+              @"out-of-series -> drift (allowed, logged)");
+        check([Manifest matchForVersion:@"2.1.209" kind:AgentClaude] == VersionSameSeries,
+              @"claude patch bump -> same series");
+        check([Manifest matchForVersion:nil kind:AgentCodex] == VersionUnknown
+              && [Manifest matchForVersion:@"" kind:AgentClaude] == VersionUnknown,
+              @"unresolvable version -> unknown (hard refusal)");
+
         printf("\n== injection safety ==\n");
         check([Config isInjectionSafe:@"fable"], @"safe: fable");
         check([Config isInjectionSafe:@"sonnet[1m]"], @"safe: sonnet[1m]");

@@ -420,13 +420,34 @@ else is a refusal or a verified-unknown, each emitted at a specific stage.
 
 ## Agent qualification
 
-Qualified versions are pinned in `src/core/Manifest.m`: Claude Code `2.1.205`
-(Anthropic, `com.anthropic.claude-code`), Codex CLI `0.144.1` (OpenAI, `codex`).
-Versions are resolved from the nearest ancestor `package.json` of the running binary
-(claude keeps it one level above `bin/`; codex nests the real binary at
+Identity is a hard gate; version is a drift signal. The distinction matters because
+agents ship patch releases weekly, and an exact-version pin turns every routine
+`npm update` into a refusal (it did, twice, in live use).
+
+**Hard gates (never relaxed):** a valid code signature, the provider's Developer ID
+team (Anthropic `Q6L2SF6YDW`, OpenAI `2DC432GLL2`), the expected code identifier, and
+a resolvable version. These prove the binary is authentically the agent it claims to
+be. Versions are resolved from the nearest ancestor `package.json` of the running
+binary (claude keeps it one level above `bin/`; codex nests the real binary at
 `vendor/<triple>/bin/`, three levels down).
 
-When qualifying a new agent version:
+**Version policy (`Manifest.matchForVersion`):**
+
+| Resolved version | Treatment |
+|---|---|
+| In the qualified set (`qualifiedVersions()`) | known-good |
+| Same major.minor series as a qualified version | accepted — patch releases have never changed the TUI vocabulary |
+| Out-of-series on an authentic binary | accepted, with a warning line in `~/.stickshift/log` |
+| Unresolvable | refused (`UNSUPPORTED_AGENT_VERSION`) — we cannot even say what we are driving |
+
+Tolerating drift does not weaken the keystroke-level safety: every UI interaction is
+independently re-proven at runtime. If a new version changed the footer, the
+classifier refuses; changed the picker, row lookup refuses; changed a dialog, the
+ownership check refuses; dropped the keystrokes, delivery proof refuses. The worst
+case of driving an unknown version is a clean refusal with a reason code, never a
+wrong keystroke.
+
+When a new series ships (e.g. codex 0.145.x), promote it to known-good:
 
 1. Add the version to `qualifiedVersions()` in `Manifest.m`.
 2. Re-extract the composer placeholder rotation from the new binary (`strings` dump;
@@ -435,7 +456,7 @@ When qualifying a new agent version:
 3. Re-check the footer/status-line formats against the classifier fixtures. Codex has
    already shipped three: `model effort · /path`, `model effort   ~/path`, and a
    hint-bar mode where the path is replaced by command help.
-4. Run `make test` and the pipeline matrix (below) before trusting it live.
+4. Run `make test` and `make matrix` before trusting it live.
 
 ## Testing
 

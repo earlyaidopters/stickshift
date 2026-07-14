@@ -92,12 +92,19 @@ against a live agent session. The full manual procedure:
 
 ### A different agent version (claude or codex updated)
 
-The manifest pins qualified versions and will refuse others
-(`UNSUPPORTED_AGENT_VERSION`). Follow "Agent qualification" in `README.md`: add the
-version to `qualifiedVersions()` in `src/core/Manifest.m`, re-extract the codex
-composer placeholder rotation (`strings <codex binary> | grep ...`, see
+Routine updates need NOTHING: same-series patch bumps qualify automatically, and
+out-of-series versions on authentically-signed binaries are driven with a logged
+drift warning (runtime proofs catch any real UI change as a clean refusal).
+`UNSUPPORTED_AGENT_VERSION` now only means an identity failure (signature, team,
+code id) or an unresolvable version — read the detail, it itemizes which.
+
+When a new series ships, promote it to known-good per "Agent qualification" in
+`README.md`: add it to `qualifiedVersions()` in `src/core/Manifest.m`, re-extract the
+codex composer placeholder rotation (`strings <codex binary>`, see
 `codexPlaceholders()` in `src/core/AXState.m`), re-check footer formats against the
-fixtures, then `make test`.
+fixtures, then `make test && make matrix`. If the user reports `DRAFT_PRESENT` on an
+empty composer or sudden classifier misses after an update, those are the two known
+drift symptoms — placeholder rotation and footer format respectively.
 
 ### Different models or gear mappings
 

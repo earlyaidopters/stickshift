@@ -210,6 +210,12 @@ static SwitchOutcome *out(ShiftReason r, NSString *stage, NSString *detail) {
 
 // Shared post-attribution core: precheck, plan, no-op, inject, watch, verify.
 + (SwitchOutcome *)applyTuple:(GearTuple *)tuple target:(TargetTuple *)t cfg:(Config *)cfg commit:(BOOL)commit {
+    // Version drift is allowed (identity is authentic; every UI step re-proves
+    // itself at runtime) but never silent — the log shows what we were driving.
+    if (t.identity.versionMatch == VersionDrift)
+        StickShiftLogLine([NSString stringWithFormat:
+            @"note: %@ %@ is outside the qualified series — driving on runtime proofs",
+            t.identity.kind == AgentClaude ? @"claude" : @"codex", t.identity.version ?: @"?"]);
     // PRECHECK (fail closed)
     PaneState *pane = t.pane;
     if (pane.busy) return out(ShiftBusy, @"PRECHECK", @"agent is busy (esc-to-interrupt present)");
