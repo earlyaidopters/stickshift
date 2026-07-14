@@ -1,0 +1,503 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --plate:#1c1e22; --plate-2:#26292f; --plate-hi:#3a3f47; --engrave:#0b0c0e;
+    --ink:#c9ced6; --ink-dim:#7d848e; --amber:#e8a33d; --amber-glow:#ffcf7a;
+    --ultra:#8b5cf6; --ultra-hot:#c4b5fd; --slot:#141619;
+    --num:"Futura","Avenir Next Condensed","Helvetica Neue",sans-serif;
+    --ui:system-ui,-apple-system,"SF Pro Text",sans-serif;
+    --mono:"SF Mono",ui-monospace,Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:var(--ui); color:var(--ink); -webkit-user-select:none; user-select:none; overflow:hidden;
+    display:flex; flex-direction:column;
+    background:
+      radial-gradient(140% 100% at 50% -20%, #2a2e35 0%, #16181c 55%, #0c0d10 100%);}
+  /* carbon-fiber weave under everything */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+    background:
+      linear-gradient(27deg, #151719 5px, transparent 5px) 0 5px,
+      linear-gradient(207deg, #151719 5px, transparent 5px) 10px 0,
+      linear-gradient(27deg, #1a1c20 5px, transparent 5px) 0 10px,
+      linear-gradient(207deg, #1a1c20 5px, transparent 5px) 10px 5px,
+      #101114;
+    background-size:20px 20px; mix-blend-mode:multiply;}
+
+  /* ---------- header ---------- */
+  .top{display:flex; align-items:center; gap:18px; padding:0 18px; height:58px; flex:0 0 58px;
+    border-bottom:1px solid #000; background:linear-gradient(#22252b,#171a1e);
+    box-shadow:0 1px 0 #34383f inset; position:relative; z-index:12}
+  .brand{display:flex; align-items:center; gap:10px}
+  .telltale{width:12px;height:12px;border-radius:50%;background:#3a2a12; box-shadow:0 0 0 1px #000 inset; transition:.25s}
+  .telltale.on{background:var(--amber); box-shadow:0 0 10px 2px var(--amber-glow),0 0 0 1px #000 inset}
+  .logo{font-family:var(--num); font-size:15px; letter-spacing:.34em; color:var(--ink-dim); font-weight:600}
+  .logo b{color:#fff; font-weight:700}
+  .seg{display:flex; background:#0e1013; border:1px solid #000; border-radius:10px; padding:3px}
+  .seg button{font-family:var(--ui); font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-dim); background:transparent; border:0; padding:7px 22px; border-radius:7px; cursor:pointer;
+    display:flex; align-items:center; gap:8px; transition:.18s}
+  .seg button .dot{width:7px;height:7px;border-radius:50%;background:#3a3f47; transition:.2s}
+  .seg button.sel{color:#fff; background:linear-gradient(#2c3037,#22262c); box-shadow:0 1px 0 #444 inset,0 2px 5px rgba(0,0,0,.5)}
+  .seg button.live .dot{background:var(--amber); box-shadow:0 0 6px var(--amber-glow)}
+  .provider{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
+  .wctl{margin-left:auto; display:flex; gap:7px}
+  .wctl button{width:26px;height:26px;border-radius:7px;border:1px solid #33383f;background:#191c21;color:#9aa1ab;
+    font-size:14px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;font-family:var(--ui)}
+  .wctl button:hover{background:#242a32;color:#fff;border-color:#4a5058}
+  body.compact .stage{display:none}
+  body.compact .top{border-bottom:none}
+
+  /* ---------- stage: gate | console | throttle ---------- */
+  .stage{flex:1; display:flex; align-items:stretch; gap:16px; padding:16px 18px 18px; position:relative; z-index:1}
+
+  .panel{border-radius:18px; border:1px solid #0a0b0d;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px),
+      linear-gradient(150deg,var(--plate-hi),var(--plate) 40%,var(--plate-2));
+    box-shadow:0 22px 48px rgba(0,0,0,.62), 0 2px 0 #4a4f57 inset, 0 -2px 8px rgba(0,0,0,.5) inset; position:relative}
+  .panel::after{content:"";position:absolute;inset:9px;border-radius:12px;box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;pointer-events:none}
+  /* corner screws */
+  .screw{position:absolute; width:9px; height:9px; border-radius:50%; z-index:2;
+    background:radial-gradient(circle at 35% 30%, #6b727c, #2c3036 70%); box-shadow:0 1px 1px rgba(255,255,255,.15) inset, 0 1px 2px #000}
+  .screw::after{content:"";position:absolute;left:1px;right:1px;top:50%;height:1.5px;transform:translateY(-50%) rotate(38deg);background:#14161a}
+  .screw.tl{top:7px;left:7px}.screw.tr{top:7px;right:7px}.screw.bl{bottom:7px;left:7px}.screw.br{bottom:7px;right:7px}
+  .ptitle{position:absolute; top:12px; left:0; right:0; text-align:center; font-family:var(--num);
+    font-size:11px; letter-spacing:.32em; color:var(--ink-dim); text-transform:uppercase; z-index:2}
+
+  /* ---------- gear gate (left) ---------- */
+  .platewrap{flex:0 0 330px; display:flex}
+  .plate{flex:1}
+  .slots{position:absolute; inset:64px 66px 46px}
+  .rail{position:absolute; background:var(--slot); box-shadow:0 2px 3px rgba(0,0,0,.9) inset, 0 -1px 1px rgba(255,255,255,.04) inset; border-radius:16px}
+  .col{width:22px; top:0; bottom:0}
+  .col.c1{left:0} .col.c2{left:50%; transform:translateX(-50%)} .col.c3{right:0}
+  .cross{height:22px; left:0; right:0; top:50%; transform:translateY(-50%)}
+
+  .gate{position:absolute; width:86px; height:64px; display:flex; align-items:center; justify-content:center; border-radius:10px; z-index:3; cursor:pointer}
+  .gate .num{font-family:var(--num); font-size:42px; font-weight:600; color:var(--ink-dim);
+    text-shadow:0 1px 0 #000, 0 -1px 0 rgba(255,255,255,.05); transition:.2s; letter-spacing:.02em}
+  .gate .cap{position:absolute; display:flex; flex-direction:column; align-items:center; white-space:nowrap;
+    font-size:10.5px; letter-spacing:.04em; color:var(--ink-dim); font-family:var(--ui)}
+  .gate.top .cap{top:-19px} .gate.bot .cap{bottom:-19px}
+  .gate.empty .num{opacity:.2} .gate.empty{pointer-events:none}
+  .gate.active .num{color:var(--amber); text-shadow:0 0 14px var(--amber-glow)}
+  .gate.active .cap{color:var(--amber)}
+  .gate.sel .num{color:#fff}
+  .gate.sel .cap{color:#e8ebef}
+  .g1{left:calc(0% - 32px); top:-4px}   .g2{left:calc(0% - 32px); bottom:-4px}
+  .g3{left:calc(50% - 43px); top:-4px}  .g4{left:calc(50% - 43px); bottom:-4px}
+  .g5{right:calc(0% - 32px); top:-4px}  .gR{right:calc(0% - 32px); bottom:-4px}
+
+  /* shift boot: dark leather circle under the knob's rest position */
+  .boot{position:absolute; left:50%; top:50%; width:86px; height:86px; margin:-43px 0 0 -43px; border-radius:50%; z-index:4; pointer-events:none;
+    background:radial-gradient(circle at 50% 42%, #23262b 0%, #17191d 55%, #101216 100%);
+    box-shadow:0 0 0 1px #000, 0 2px 4px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.05) inset; opacity:.9}
+  .knob{position:absolute; width:64px; height:64px; border-radius:50%; z-index:5; left:50%; top:50%; margin:-32px 0 0 -32px; cursor:grab;
+    background:radial-gradient(circle at 34% 28%, #ffffff 0%, #dfe4ea 22%, #aeb6c0 55%, #6c737d 78%, #4a5058 100%);
+    box-shadow:0 8px 16px rgba(0,0,0,.65), 0 1px 2px rgba(255,255,255,.7) inset, 0 -8px 14px rgba(0,0,0,.35) inset;
+    transition:left .3s cubic-bezier(.34,1.32,.5,1), top .3s cubic-bezier(.34,1.32,.5,1);}
+  .knob.drag{cursor:grabbing; transition:none; box-shadow:0 14px 24px rgba(0,0,0,.75), 0 1px 2px rgba(255,255,255,.7) inset}
+  .knob::after{content:"";position:absolute;inset:21px;border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, rgba(255,255,255,.6), rgba(0,0,0,.15)); box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+
+  /* ---------- console (center) ---------- */
+  .console{flex:1; display:flex; flex-direction:column; padding:44px 18px 14px; min-width:0}
+  .lcd{border-radius:12px; border:1px solid #000; background:linear-gradient(#0c0e10,#111316 60%,#0c0e10);
+    box-shadow:0 2px 6px rgba(0,0,0,.8) inset, 0 1px 0 rgba(255,255,255,.05); padding:14px 16px 12px; position:relative; overflow:hidden}
+  .lcd::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.016) 0 1px, transparent 1px 3px)}
+  .lcd .lbl{font-family:var(--num); font-size:9.5px; letter-spacing:.3em; color:#5f6670; text-transform:uppercase; display:block; margin-bottom:3px}
+  .lcd .val{font-family:var(--mono); font-size:21px; font-weight:600; color:var(--amber); letter-spacing:.04em;
+    text-shadow:0 0 12px rgba(232,163,61,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; line-height:1.15}
+  .lcd .val.eff{font-size:16px; color:var(--amber-glow); text-shadow:0 0 9px rgba(255,207,122,.4); margin-top:9px}
+  body.hot .lcd .val.eff{color:var(--ultra-hot); text-shadow:0 0 12px var(--ultra)}
+
+  .gauge{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; margin:6px 0; position:relative}
+  .gauge svg{display:block; overflow:visible; width:196px; height:115px}
+  .glabel{text-align:center; font-family:var(--num); font-size:9.5px; letter-spacing:.3em; color:#5f6670; text-transform:uppercase; margin-top:2px}
+
+  .live{margin-top:auto; display:flex; align-items:center; gap:8px; padding:8px 11px; border-radius:9px;
+    border:1px solid #23272d; background:rgba(10,11,13,.55); min-height:34px}
+  .live .ldot{width:7px;height:7px;border-radius:50%;background:#3a3f47;flex:0 0 auto}
+  .live.on .ldot{background:#5fd47a; box-shadow:0 0 7px #5fd47a}
+  .live .ltext{font-size:11px; color:var(--ink-dim); letter-spacing:.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .live.on .ltext{color:var(--ink)}
+
+  /* ---------- effort throttle (right) ---------- */
+  .effort{flex:0 0 150px; display:flex; flex-direction:column; align-items:stretch; padding:44px 0 16px}
+  .etrack{position:relative; flex:1; margin:0 12px}
+  .espine{position:absolute; left:26px; top:10px; bottom:10px; width:12px; border-radius:8px; background:var(--slot);
+    box-shadow:0 2px 3px #000 inset, 0 -1px 1px rgba(255,255,255,.04) inset}
+  /* redline zone at the top of the spine */
+  .espine::before{content:"";position:absolute;left:2px;right:2px;top:2px;height:14%;border-radius:6px;
+    background:linear-gradient(rgba(139,92,246,.55),transparent); box-shadow:0 0 8px rgba(139,92,246,.35)}
+  .tick{position:absolute; left:0; right:0; height:0; transform:translateY(-50%); cursor:pointer}
+  .tick .dash{position:absolute; left:18px; width:28px; height:2.5px; background:#3a3f47; border-radius:2px}
+  .tick .tl{position:absolute; left:54px; top:-7px; font-size:11px; letter-spacing:.05em; color:#666d76; text-transform:uppercase; white-space:nowrap; font-family:var(--ui)}
+  .tick.on .tl{color:var(--amber); text-shadow:0 0 8px rgba(232,163,61,.4)} .tick.on .dash{background:var(--amber); box-shadow:0 0 6px rgba(232,163,61,.5)}
+  .ehandle{position:absolute; left:32px; transform:translate(-50%,-50%); width:38px; height:26px; border-radius:8px; cursor:grab; z-index:4;
+    background:linear-gradient(#e9edf2,#aeb6c0 60%,#7d848e); box-shadow:0 4px 9px rgba(0,0,0,.6),0 1px 1px rgba(255,255,255,.7) inset;}
+  .ehandle::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:2px;transform:translateY(-50%);background:rgba(0,0,0,.25);box-shadow:0 4px 0 rgba(0,0,0,.18),0 -4px 0 rgba(0,0,0,.18)}
+  .ehandle.drag{cursor:grabbing; transition:none}
+  .ehandle.hot{background:linear-gradient(#efe7ff,#b9a7ee 60%,#6d4fc0); box-shadow:0 0 20px 4px var(--ultra-hot),0 4px 9px rgba(0,0,0,.6)}
+  body.hot{background:radial-gradient(140% 100% at 50% 20%, #2a1c46 0%, #170f28 55%, #0c0912 100%)}
+  body.hot .panel{box-shadow:0 22px 56px rgba(120,70,220,.32),0 2px 0 #5a4f7a inset,0 -2px 8px rgba(0,0,0,.5) inset}
+
+  /* ---------- settings drawer ---------- */
+  .settings{position:absolute; top:64px; right:18px; width:300px; z-index:15; display:none; flex-direction:column; gap:7px;
+    background:linear-gradient(150deg,var(--plate-hi),var(--plate) 45%,var(--plate-2));
+    border:1px solid #0a0b0d; border-radius:14px; padding:14px;
+    box-shadow:0 22px 48px rgba(0,0,0,.75),0 2px 0 #4a4f57 inset}
+  .settings.open{display:flex}
+  .stitle{font-family:var(--num); font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:3px}
+  .sopt{border:1px solid #2b3037; border-radius:9px; padding:9px 12px; cursor:pointer; font-size:12.5px; color:var(--ink);
+    background:#15171b; transition:.15s}
+  .sopt small{display:block; font-size:10px; color:var(--ink-dim); margin-top:2px}
+  .sopt:hover{border-color:#4a5058}
+  .sopt.on{border-color:var(--amber); color:#fff; box-shadow:0 0 10px rgba(232,163,61,.25)}
+  .sopt.on small{color:var(--amber)}
+
+  .toast{position:absolute; left:50%; bottom:12px; transform:translateX(-50%) translateY(20px);
+    background:#0d0e11; border:1px solid #34383f; color:var(--ink); font-size:12px; padding:9px 15px; border-radius:9px;
+    letter-spacing:.02em; opacity:0; transition:.25s; max-width:520px; text-align:center; box-shadow:0 10px 24px rgba(0,0,0,.55); z-index:14}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.warn{border-color:#7a5a1a; color:var(--amber-glow)} .toast.err{border-color:#7a2a2a; color:#ff9a9a} .toast.ok{border-color:#2f6a3a; color:#9be6a8}
+  @media (prefers-reduced-motion:reduce){.knob,.ehandle{transition:none!important}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <div class="telltale" id="tell"></div>
+      <span class="logo">STICK<b>SHIFT</b></span>
+    </div>
+    <div class="seg" id="seg">
+      <button class="claude sel" data-p="claude"><span class="dot"></span>Claude</button>
+      <button class="codex" data-p="codex"><span class="dot"></span>Codex</button>
+    </div>
+    <div class="provider" id="provider">CLAUDE CODE</div>
+    <div class="wctl">
+      <button id="btnGear" title="Settings">⚙</button>
+      <button id="btnReset" title="Reset stick to the pane's actual state">↺</button>
+      <button id="btnCompact" title="Collapse / expand">–</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <section class="panel platewrap">
+      <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+      <div class="ptitle">Gate</div>
+      <div class="plate" id="plate" style="position:relative;border:0;background:none;box-shadow:none">
+        <div class="slots"><div class="rail col c1"></div><div class="rail col c2"></div><div class="rail col c3"></div><div class="rail cross"></div>
+          <div class="gate g1 top" data-gate="1"><span class="num">1</span><span class="cap"></span></div>
+          <div class="gate g2 bot" data-gate="2"><span class="num">2</span><span class="cap"></span></div>
+          <div class="gate g3 top" data-gate="3"><span class="num">3</span><span class="cap"></span></div>
+          <div class="gate g4 bot" data-gate="4"><span class="num">4</span><span class="cap"></span></div>
+          <div class="gate g5 top" data-gate="5"><span class="num">5</span><span class="cap"></span></div>
+          <div class="gate gR bot" data-gate="R"><span class="num">R</span><span class="cap"></span></div>
+          <div class="boot"></div>
+          <div class="knob" id="knob"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel console">
+      <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+      <div class="ptitle">Console</div>
+      <div class="lcd">
+        <span class="lbl">Model</span>
+        <span class="val" id="selModel">—</span>
+        <span class="val eff" id="selEffort"></span>
+      </div>
+      <div class="gauge">
+        <svg id="gsvg" width="190" height="112" viewBox="0 0 190 112">
+          <defs>
+            <linearGradient id="arcgrad" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stop-color="#3a3f47"/><stop offset="70%" stop-color="#e8a33d"/><stop offset="100%" stop-color="#8b5cf6"/>
+            </linearGradient>
+          </defs>
+          <path d="M 15 100 A 80 80 0 0 1 175 100" fill="none" stroke="#0c0e10" stroke-width="14" stroke-linecap="round"/>
+          <path d="M 15 100 A 80 80 0 0 1 175 100" fill="none" stroke="url(#arcgrad)" stroke-width="7" stroke-linecap="round" opacity=".85"/>
+          <g id="gticks" stroke="#565d66" stroke-width="2"></g>
+          <g id="needleg" transform="rotate(-90 95 100)">
+            <line x1="95" y1="100" x2="95" y2="34" stroke="#ff5a4e" stroke-width="3" stroke-linecap="round"/>
+            <line x1="95" y1="100" x2="95" y2="34" stroke="rgba(255,90,78,.35)" stroke-width="7" stroke-linecap="round"/>
+          </g>
+          <circle cx="95" cy="100" r="9" fill="#22262c" stroke="#0b0c0e" stroke-width="2"/>
+          <circle cx="95" cy="100" r="3.5" fill="#9aa1ab"/>
+        </svg>
+        <div class="glabel">Effort</div>
+      </div>
+      <div class="live" id="liveChip"><span class="ldot"></span><span class="ltext" id="hint">focus a terminal pane</span></div>
+    </section>
+
+    <section class="panel effort">
+      <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+      <div class="ptitle">Throttle</div>
+      <div class="etrack" id="etrack"><div class="espine"></div><div class="ehandle" id="ehandle"></div></div>
+    </section>
+
+    <div class="settings" id="settings">
+      <div class="stitle">When Claude asks to confirm a switch</div>
+      <div class="sopt" data-pol="confirm">Auto-confirm<small>switch and bring the conversation along</small></div>
+      <div class="sopt" data-pol="ask">Ask me<small>leave the dialog open in the terminal</small></div>
+      <div class="sopt" data-pol="cancel">Auto-cancel<small>never switch mid-conversation</small></div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+<script>
+  // Gate fractions are of the SLOTS box (the H-pattern rails): the knob is a child
+  // of .slots, so its % position AND the drag math must share that coordinate space.
+  // (The knob was briefly positioned in slots-space while drags mapped plate-space —
+  // clicks missed the knob, dragged the whole window, and gates landed wrong.)
+  const GATES=["1","2","3","4","5","R"];
+  const GPOS={ "1":{x:0,y:0},"2":{x:0,y:1},"3":{x:.5,y:0},"4":{x:.5,y:1},"5":{x:1,y:0},"R":{x:1,y:1},"N":{x:.5,y:.5} };
+  const COLS=[0,.5,1];
+  const DEFAULTS={
+    claude:{name:'Claude Code',
+      models:[{gate:'1',token:'haiku',label:'Haiku 4.5'},{gate:'2',token:'sonnet',label:'Sonnet 5'},
+              {gate:'3',token:'default',label:'Opus 4.8'},{gate:'4',token:'fable',label:'Fable 5'}],
+      efforts:[{token:'low',label:'low'},{token:'medium',label:'medium'},{token:'high',label:'high'},
+               {token:'xhigh',label:'xhigh'},{token:'max',label:'max'},{token:'ultracode',label:'ultracode'}],
+      modelEfforts:{}},
+    codex:{name:'Codex',
+      models:[{gate:'1',token:'gpt-5.4-mini',label:'gpt-5.4-mini'},{gate:'2',token:'gpt-5.4',label:'gpt-5.4'},
+              {gate:'3',token:'gpt-5.5',label:'gpt-5.5'},{gate:'4',token:'gpt-5.6-luna',label:'gpt-5.6-luna'},
+              {gate:'5',token:'gpt-5.6-terra',label:'gpt-5.6-terra'},{gate:'R',token:'gpt-5.6-sol',label:'gpt-5.6-sol'}],
+      efforts:[{token:'low',label:'low'},{token:'medium',label:'medium'},{token:'high',label:'high'},
+               {token:'xhigh',label:'extra high'},{token:'max',label:'max'}],
+      modelEfforts:{'gpt-5.6-sol':[{token:'low',label:'low'},{token:'medium',label:'medium'},{token:'high',label:'high'},
+               {token:'xhigh',label:'extra high'},{token:'max',label:'max'},{token:'ultra',label:'ultra'}]}}
+  };
+
+  let PROFILES=null, shown='claude', liveAgent=null, liveToken='', liveEffort='', userLocked=false;
+  let selGate=null, selModel=null, effList=[], effIdx=0;
+  let dragging=false, pending=false, compact=false;
+  const knob=document.getElementById('knob'), plate=document.getElementById('plate');
+  const slots=document.querySelector('.slots');
+  const etrack=document.getElementById('etrack'), ehandle=document.getElementById('ehandle');
+  const toast=document.getElementById('toast'); let toastT;
+
+  function prof(){ return (PROFILES||DEFAULTS)[shown]; }
+  function modelByGate(g){ return prof().models.find(m=>m.gate===g)||null; }
+  function effortsForModel(tok){ const p=prof(); return (tok && p.modelEfforts && p.modelEfforts[tok]) ? p.modelEfforts[tok] : p.efforts; }
+  function showToast(m,k){ toast.textContent=m; toast.className='toast show '+(k||''); clearTimeout(toastT); toastT=setTimeout(()=>toast.className='toast',2600); }
+
+  function knobTo(fx,fy){ knob.style.left=(fx*100)+'%'; knob.style.top=(fy*100)+'%'; }
+  function knobToGate(g){ const p=GPOS[g]||GPOS.N; knobTo(p.x,p.y); }
+
+  // ---- effort gauge (console tachometer) ----
+  // Needle sweeps -90° (low) to +90° (top effort); ticks are rebuilt per effort list.
+  function renderGaugeTicks(){
+    const g=document.getElementById('gticks'); g.innerHTML='';
+    const n=effList.length; if(n<2) return;
+    for(let i=0;i<n;i++){
+      const a=(-90 + (i/(n-1))*180) * Math.PI/180;
+      const x1=95+Math.sin(a)*70, y1=100-Math.cos(a)*70;
+      const x2=95+Math.sin(a)*62, y2=100-Math.cos(a)*62;
+      const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+      g.appendChild(l);
+    }
+  }
+  function updateGauge(){
+    const n=effList.length;
+    const frac = n>1 ? effIdx/(n-1) : 0;
+    const deg = -90 + frac*180;
+    document.getElementById('needleg').setAttribute('transform','rotate('+deg+' 95 100)');
+  }
+
+  // ---- render gates + effort ticks for current profile ----
+  function renderGates(){
+    const p=prof();
+    document.getElementById('provider').textContent=p.name.toUpperCase();
+    document.querySelectorAll('.seg button').forEach(b=>{ b.classList.toggle('sel',b.dataset.p===shown); b.classList.toggle('live',b.dataset.p===liveAgent); });
+    GATES.forEach(g=>{
+      const el=document.querySelector('.g'+g), m=modelByGate(g);
+      el.classList.toggle('empty', !m);
+      el.querySelector('.cap').textContent = m? m.label : '';
+      el.classList.toggle('sel', !!selGate && g===selGate && !!m);
+    });
+  }
+  function renderEfforts(){
+    effList=effortsForModel(selModel? selModel.token : liveToken);
+    if(effIdx>=effList.length) effIdx=effList.length-1;
+    if(effIdx<0) effIdx=0;
+    // clear existing ticks
+    etrack.querySelectorAll('.tick').forEach(t=>t.remove());
+    const n=effList.length;
+    effList.forEach((e,i)=>{
+      const frac = 1 - (i/(n-1)); // low at bottom, top level at top
+      const t=document.createElement('div'); t.className='tick'+(i===effIdx?' on':'');
+      t.style.top=(10 + frac*(etrack.clientHeight-20))+'px';
+      t.innerHTML='<span class="dash"></span><span class="tl">'+e.label+'</span>';
+      t.addEventListener('click',()=>{ effIdx=i; applyEffort(true); });
+      etrack.appendChild(t);
+    });
+    renderGaugeTicks();
+    positionHandle();
+  }
+  function handleFrac(){ const n=effList.length; return 1-(effIdx/(n-1)); }
+  function positionHandle(){
+    const frac=handleFrac(); ehandle.style.top=(10+frac*(etrack.clientHeight-20))+'px';
+    const top = effIdx===effList.length-1;
+    ehandle.classList.toggle('hot', top); document.body.classList.toggle('hot', top);
+    updateGauge();
+  }
+  function updateReadout(){
+    document.getElementById('selModel').textContent = selModel? selModel.label : (liveToken? liveToken : '—');
+    document.getElementById('selEffort').textContent = effList[effIdx]? effList[effIdx].label : '';
+    updateGauge();
+  }
+
+  function selectProfile(p, byUser){ shown=p; if(byUser) userLocked=true; selGate=null; selModel=null; renderGates(); renderEfforts(); updateReadout(); knobToGate('N'); }
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>selectProfile(b.dataset.p,true)));
+
+  function canFire(){ return !liveAgent || shown===liveAgent; }
+  function fire(gate){
+    const model = selModel? selModel.token : liveToken;
+    const effort = effList[effIdx]? effList[effIdx].token : '';
+    if(!model){ showToast('pick a model first','warn'); return; }
+    if(!canFire()){ showToast('preview only — focus a '+shown+' pane to shift','warn'); return; }
+    if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.shift)
+      webkit.messageHandlers.shift.postMessage({model:model, effort:effort, gate:gate||selGate||''});
+    else showToast('(preview) '+model+' · '+effort,'warn');
+  }
+  function applyModel(g){ selGate=g; selModel=modelByGate(g); pending=true; renderGates(); renderEfforts(); updateReadout(); fire(g); }
+  function applyEffort(doFire){ if(doFire) pending=true; renderEfforts(); positionHandle(); updateReadout(); if(doFire) fire(selGate); }
+
+  // Snap the stick + lever back to the pane's ACTUAL state (after an error, or on demand).
+  // No injection — purely re-syncs the UI to reality.
+  function syncToLive(){
+    if(liveAgent) shown=liveAgent;
+    const lm = prof().models.find(m=>m.token===liveToken) || null;
+    selGate = lm? lm.gate : null; selModel = lm;
+    renderGates();
+    // set effIdx to the live effort BEFORE rendering, so tick highlight + handle agree
+    const list = effortsForModel(lm? lm.token : liveToken);
+    if(liveEffort){ const i=list.findIndex(e=>e.label.toLowerCase()===liveEffort.toLowerCase()||e.token===liveEffort); if(i>=0) effIdx=i; }
+    if(effIdx>=list.length) effIdx=list.length-1;
+    renderEfforts();
+    positionHandle(); updateReadout();
+    knobToGate(selGate||'N');
+  }
+
+  // ---- settings drawer: switch-dialog policy ----
+  let policy='confirm';
+  window.setPolicy=function(p){ policy=p;
+    document.querySelectorAll('.sopt').forEach(o=>o.classList.toggle('on',o.dataset.pol===p)); };
+  window.policySaved=function(r){
+    if(r.ok) showToast('switch dialogs: '+({confirm:'auto-confirm',ask:'ask me',cancel:'auto-cancel'}[r.policy]||r.policy),'ok');
+    else showToast('could not save settings — '+r.err,'err'); };
+  document.getElementById('btnGear').addEventListener('click',()=>{
+    document.getElementById('settings').classList.toggle('open'); });
+  document.querySelectorAll('.sopt').forEach(o=>o.addEventListener('click',()=>{
+    window.setPolicy(o.dataset.pol);
+    if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.policy)
+      webkit.messageHandlers.policy.postMessage({policy:o.dataset.pol});
+    else showToast('(preview) policy '+o.dataset.pol,'warn');
+    setTimeout(()=>document.getElementById('settings').classList.remove('open'),350);
+  }));
+
+  // ---- window controls: reset position + collapse ----
+  document.getElementById('btnReset').addEventListener('click',()=>{ syncToLive(); showToast('reset to '+(liveToken||'current')+' state','ok'); });
+  document.getElementById('btnCompact').addEventListener('click',()=>{
+    compact=!compact; document.body.classList.toggle('compact',compact);
+    document.getElementById('btnCompact').textContent = compact?'▢':'–';
+    if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.resize)
+      webkit.messageHandlers.resize.postMessage({compact:compact});
+  });
+  // double-click any empty area also resets the stick to the real state
+  document.querySelector('.stage').addEventListener('dblclick',()=>{ syncToLive(); showToast('reset','ok'); });
+
+  // ---- drag the whole panel from empty areas (WKWebView covers the window) ----
+  document.addEventListener('mousedown',function(e){
+    if (e.target.closest('.gate,.knob,#ehandle,.tick,.seg button,.wctl button,.settings')) return; // let controls work
+    if (window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.drag)
+      webkit.messageHandlers.drag.postMessage({});
+  }, true);
+
+  // ---- drag the stick ----
+  // Each control has its OWN drag flag; `dragging` stays the shared "any drag" signal
+  // for setLive. With one shared flag, both windows-level move/up handlers ran for
+  // either control: dragging the effort lever also drove the stick (whose mouseup,
+  // registered first, mapped the cursor to gate 5/R = empty on claude, toasted
+  // "empty slot", and cleared the flag so the lever's mouseup never fired at all).
+  (function(){
+    let sdrag=false;
+    function pt(ev){ return (ev.touches&&ev.touches[0])||ev; }
+    function toFrac(ev){ const r=slots.getBoundingClientRect(); const e=pt(ev);
+      return { x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)), y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height)) }; }
+    function down(ev){ sdrag=true; dragging=true; knob.classList.add('drag'); ev.preventDefault(); }
+    function move(ev){ if(!sdrag) return; const f=toFrac(ev);
+      // snap x to nearest column (rail), free travel along the full rail height
+      let col=COLS.reduce((a,b)=>Math.abs(b-f.x)<Math.abs(a-f.x)?b:a);
+      knobTo(col,f.y); ev.preventDefault(); }
+    function up(ev){ if(!sdrag) return; sdrag=false; dragging=false; knob.classList.remove('drag');
+      const f=toFrac(ev); let col=COLS.reduce((a,b)=>Math.abs(b-f.x)<Math.abs(a-f.x)?b:a);
+      const row = f.y<.5?'top':'bot';
+      const g = GATES.find(g=>{ const p=GPOS[g]; return Math.abs(p.x-col)<.01 && (row==='top'? p.y<.5 : p.y>.5); });
+      const m = g && modelByGate(g);
+      if(m){ knobToGate(g); applyModel(g); }
+      else { knobToGate(selGate||'N'); showToast('empty slot','warn'); }
+    }
+    knob.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+    knob.addEventListener('touchstart',down,{passive:false}); window.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',up);
+  })();
+
+  // ---- drag the effort lever ----
+  (function(){
+    let edrag=false;
+    function down(ev){ edrag=true; dragging=true; ehandle.classList.add('drag'); ev.preventDefault(); }
+    function move(ev){ if(!edrag) return; const r=etrack.getBoundingClientRect(); const e=(ev.touches&&ev.touches[0])||ev;
+      const y=Math.min(r.height-10,Math.max(10,e.clientY-r.top)); ehandle.style.top=y+'px';
+      // handle follows the cursor; ticks are laid out top=highest, so the index
+      // grows as the cursor moves UP (this was inverted: drag up went down)
+      const frac=1-((y-10)/(r.height-20)); const n=effList.length; effIdx=Math.round(frac*(n-1));
+      etrack.querySelectorAll('.tick').forEach((t,i)=>t.classList.toggle('on',i===effIdx));
+      const top=effIdx===n-1; ehandle.classList.toggle('hot',top); document.body.classList.toggle('hot',top);
+      updateReadout(); ev.preventDefault(); }
+    function up(ev){ if(!edrag) return; edrag=false; dragging=false; ehandle.classList.remove('drag'); applyEffort(true); }
+    ehandle.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+    ehandle.addEventListener('touchstart',down,{passive:false}); window.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',up);
+  })();
+
+  // ---- native bridge ----
+  window.setProfiles=function(p){ PROFILES=p; renderGates(); renderEfforts(); updateReadout(); };
+  window.setLive=function(s){
+    liveAgent = s.agent==='claude'||s.agent==='codex'? s.agent : null;
+    liveToken = s.token||''; liveEffort = s.effort||'';
+    document.getElementById('selModel')._live = s.model||'';
+    document.getElementById('tell').classList.toggle('on', !!s.model);
+    if(liveAgent && !userLocked && shown!==liveAgent){ shown=liveAgent; selGate=null; selModel=null; }
+    document.getElementById('hint').textContent = liveAgent? ('acting on '+liveAgent+' · '+(s.model||'?')+(s.effort?(' · '+s.effort):'')) : 'focus a terminal pane';
+    document.getElementById('liveChip').classList.toggle('on', !!liveAgent);
+    // Reflect reality when the user isn't mid-action. This is what keeps the stick from
+    // lying about the state after an error, and shows where the pane actually is.
+    if(!dragging && !pending) syncToLive();
+    else { renderGates(); renderEfforts(); updateReadout(); }
+  };
+  window.outcome=function(o){
+    pending=false;
+    showToast(o.detail?(o.reason+' — '+o.detail):o.reason, o.ok?'ok':(o.warn?'warn':'err'));
+    if(o.ok){ document.getElementById('tell').classList.add('on');
+      if(o.activeGate){ document.querySelectorAll('.gate').forEach(e=>e.classList.toggle('active', e.dataset.gate===o.activeGate)); } }
+    else { syncToLive(); }   // error/refused -> snap the stick+lever back to the real state
+  };
+
+  // test/demo hook: engage a gate + set effort by token (no injection)
+  window.demoSelect=function(gate,effTok){ selGate=gate; selModel=modelByGate(gate); renderGates();
+    renderEfforts(); const i=effList.findIndex(e=>e.token===effTok); if(i>=0) effIdx=i;
+    renderEfforts(); knobToGate(gate); updateReadout(); };
+
+  window.addEventListener('resize',()=>{ renderEfforts(); knobToGate(selGate||'N'); });
+  renderGates(); renderEfforts(); updateReadout(); knobToGate('N');
+</script>
+</body>
+</html>

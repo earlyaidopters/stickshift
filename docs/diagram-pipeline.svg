@@ -1,0 +1,124 @@
+<svg viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, monospace">
+  <defs>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0,1 L 8,5 L 0,9 z" fill="#e8a33d" />
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0,1 L 8,5 L 0,9 z" fill="#ff5a4e" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="980" height="560" fill="#16181c" />
+  
+  <!-- Outer framing for instrument panel aesthetic -->
+  <rect x="10" y="10" width="960" height="540" fill="none" stroke="#2d3139" stroke-width="1" rx="8" />
+
+  <!-- Title & Caption -->
+  <text x="30" y="45" font-size="22" font-weight="bold" fill="#c9ced6" letter-spacing="1">ANATOMY OF A <tspan fill="#e8a33d">SHIFT</tspan></text>
+  <text x="30" y="70" font-size="13" fill="#7d848e">every check fails closed - nothing is typed unless the whole chain of proof holds</text>
+
+  <!-- MAIN FLOW ARROWS (AMBER) -->
+  <g fill="none" stroke="#e8a33d" stroke-width="1.5" marker-end="url(#arrowAmber)">
+    <!-- Row 1 -->
+    <path d="M 180,160 L 215,160" />
+    <path d="M 370,160 L 405,160" />
+    <path d="M 560,160 L 595,160" />
+    <path d="M 750,160 L 785,160" />
+    
+    <!-- Wrap around from Row 1 to Row 2 -->
+    <path d="M 940,160 L 950,160 Q 960,160 960,150 L 960,100 Q 960,90 950,90 L 30,90 Q 20,90 20,100 L 20,310 Q 20,320 30,320 L 120,320" stroke-linejoin="round" />
+    
+    <!-- Row 2 -->
+    <path d="M 275,320 L 310,320" />
+    <path d="M 465,320 L 500,320" />
+    <path d="M 655,320 L 690,320" />
+  </g>
+
+  <!-- REFUSAL DROP ARROWS (RED) -->
+  <g fill="none" stroke="#ff5a4e" stroke-width="1.5" marker-end="url(#arrowRed)">
+    <!-- From Stage 2, 3, 4 -->
+    <path d="M 295,200 L 295,440" />
+    <path d="M 485,200 L 485,440" />
+    <path d="M 675,200 L 675,440" />
+    
+    <!-- From Stage 6, 7, 8 -->
+    <path d="M 200,360 L 200,440" />
+    <path d="M 390,360 L 390,440" />
+    <path d="M 580,360 L 580,440" />
+  </g>
+
+  <!-- Drop Line Tap Dots -->
+  <g fill="#ff5a4e">
+    <circle cx="295" cy="200" r="2.5" />
+    <circle cx="485" cy="200" r="2.5" />
+    <circle cx="675" cy="200" r="2.5" />
+    <circle cx="200" cy="360" r="2.5" />
+    <circle cx="390" cy="360" r="2.5" />
+    <circle cx="580" cy="360" r="2.5" />
+  </g>
+
+  <!-- STAGE PLATES (ROW 1) -->
+  <g stroke="#0a0b0d" stroke-width="1">
+    <!-- 1. READ -->
+    <rect x="30" y="120" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="105" y="148" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">1.</tspan> READ</text>
+    <text x="105" y="170" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">AX pane text</text>
+
+    <!-- 2. CLASSIFY -->
+    <rect x="220" y="120" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="295" y="142" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">2.</tspan> CLASSIFY</text>
+    <text x="295" y="162" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">agent/model/</text>
+    <text x="295" y="178" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">effort/state</text>
+
+    <!-- 3. ATTRIBUTE -->
+    <rect x="410" y="120" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="485" y="148" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">3.</tspan> ATTRIBUTE</text>
+    <text x="485" y="170" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">pane -> process</text>
+
+    <!-- 4. QUALIFY -->
+    <rect x="600" y="120" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="675" y="142" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">4.</tspan> QUALIFY</text>
+    <text x="675" y="162" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">signature +</text>
+    <text x="675" y="178" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">version</text>
+
+    <!-- 5. PLAN -->
+    <rect x="790" y="120" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="865" y="142" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">5.</tspan> PLAN</text>
+    <text x="865" y="162" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">per-agent</text>
+    <text x="865" y="178" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">dialect</text>
+  </g>
+
+  <!-- STAGE PLATES (ROW 2) -->
+  <g stroke="#0a0b0d" stroke-width="1">
+    <!-- 6. PRECHECK -->
+    <rect x="125" y="280" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="200" y="302" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">6.</tspan> PRECHECK</text>
+    <text x="200" y="322" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">idle/empty/</text>
+    <text x="200" y="338" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">no-op</text>
+
+    <!-- 7. INJECT -->
+    <rect x="315" y="280" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="390" y="302" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">7.</tspan> INJECT</text>
+    <text x="390" y="322" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">keycodes +</text>
+    <text x="390" y="338" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">delivery proof</text>
+
+    <!-- 8. VERIFY -->
+    <rect x="505" y="280" width="150" height="80" rx="10" fill="#1c1e22" />
+    <text x="580" y="302" font-size="12" font-weight="bold" fill="#c9ced6" text-anchor="middle" stroke="none"><tspan fill="#8b5cf6">8.</tspan> VERIFY</text>
+    <text x="580" y="322" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">bottom-anchored</text>
+    <text x="580" y="338" font-size="11" fill="#7d848e" text-anchor="middle" stroke="none">evidence, dialogs</text>
+
+    <!-- 9. CHANGED -->
+    <rect x="695" y="280" width="150" height="80" rx="10" fill="#1c2a20" />
+    <text x="770" y="308" font-size="12" font-weight="bold" fill="#5fd47a" text-anchor="middle" stroke="none">9. CHANGED</text>
+    <text x="770" y="330" font-size="11" fill="#5fd47a" text-anchor="middle" stroke="none">(terminal success)</text>
+  </g>
+
+  <!-- REFUSAL STRIP -->
+  <rect x="140" y="440" width="700" height="70" rx="8" fill="#281a1a" stroke="#ff5a4e" stroke-width="1" />
+  <text x="490" y="465" font-size="13" font-weight="bold" fill="#ff5a4e" text-anchor="middle">REFUSE with reason code</text>
+  <text x="490" y="485" font-size="11" fill="#7d848e" text-anchor="middle">(NO_AGENT, AMBIGUOUS_AGENT, UNSUPPORTED_AGENT_VERSION,</text>
+  <text x="490" y="500" font-size="11" fill="#7d848e" text-anchor="middle">BUSY, DRAFT_PRESENT, INJECT_DROPPED, KEY_FOCUS_ELSEWHERE, ...)</text>
+
+</svg>

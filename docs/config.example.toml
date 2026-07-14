@@ -1,0 +1,23 @@
+# StickShift configuration — copy to ~/.stickshift/config.toml and edit.
+# Every key is optional; compiled-in defaults cover anything absent.
+# Full reference: docs/config.md
+
+# Confirm-dialog behavior for Claude's mid-conversation "Switch model?" /
+# "Change effort level?" dialogs.
+#   ask     = leave the dialog open in the terminal, you decide (CLI default)
+#   confirm = auto-press "Yes, switch"  (needs auto_answer = true)
+#   cancel  = auto-press "No, go back"  (needs auto_answer = true)
+dialog_policy = "confirm"
+auto_answer = true
+
+# Terminal allowlist (bundle ids). Warp is the only terminal verified end to
+# end; qualify others before trusting them (procedure in AGENTS.md).
+# Get a bundle id:  osascript -e 'id of app "iTerm"'
+enabled_terminals = ["dev.warp.Warp-Stable"]
+
+# Gear remaps: gear.<1|2|3|4|5|R|ULTRA>.<claude|codex> = "model" or "model effort"
+# Claude models are /model arguments (haiku, sonnet, default, fable).
+# Codex models are picker labels (gpt-5.4-mini ... gpt-5.6-sol).
+#gear.4.claude = "fable high"
+#gear.5.claude = "fable max"
+#gear.ULTRA.codex = "gpt-5.6-sol ultra"

@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 620" width="100%" height="100%" style="background-color:#16181c; font-family:Menlo, monospace;">
+  <defs>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e8a33d"/>
+    </marker>
+    <marker id="arrow-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7d848e"/>
+    </marker>
+  </defs>
+
+  <!-- Background for rendering consistency -->
+  <rect width="980" height="620" fill="#16181c"/>
+
+  <!-- TITLE -->
+  <text x="30" y="30" font-size="16" font-weight="bold" fill="#e8a33d" letter-spacing="2">ARCHITECTURE</text>
+
+  <!-- ================= BAND 1: SURFACES ================= -->
+  <text x="30" y="50" font-size="11" font-weight="bold" fill="#7d848e" letter-spacing="1">SURFACES</text>
+  
+  <rect x="30" y="60" width="560" height="65" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="45" y="80" font-weight="bold" fill="#e8a33d" font-size="12">StickShift.app</text>
+  <text x="165" y="80" fill="#7d848e" font-size="12">(menu-bar panel, gearbox.html in WKWebView)</text>
+  <text x="45" y="105" fill="#c9ced6" font-size="12">hotkeys Cmd+Shift+1..R</text>
+
+  <rect x="610" y="60" width="340" height="65" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="625" y="80" font-weight="bold" fill="#e8a33d" font-size="12">shift CLI</text>
+  <text x="625" y="105" fill="#c9ced6" font-size="12">dry-run / status / doctor</text>
+
+  <!-- Funnel paths: Surfaces -> Engine -->
+  <path d="M 310 125 L 310 145 L 780 145 L 780 125" fill="none" stroke="#e8a33d" stroke-width="1.5"/>
+  <path d="M 365 145 L 365 165" fill="none" stroke="#e8a33d" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+  <!-- ================= BAND 2: ENGINE ================= -->
+  <text x="30" y="160" font-size="11" font-weight="bold" fill="#7d848e" letter-spacing="1">ENGINE (Switch.m state machine)</text>
+
+  <rect x="30" y="170" width="670" height="65" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  
+  <rect x="45" y="187" width="85" height="30" rx="5" fill="#16181c" stroke="#3b3e45"/>
+  <text x="87" y="207" text-anchor="middle" fill="#c9ced6" font-size="11">precheck</text>
+  <text x="142" y="207" fill="#7d848e" font-size="12">➔</text>
+  
+  <rect x="160" y="187" width="75" height="30" rx="5" fill="#16181c" stroke="#3b3e45"/>
+  <text x="197" y="207" text-anchor="middle" fill="#c9ced6" font-size="11">inject</text>
+  <text x="247" y="207" fill="#7d848e" font-size="12">➔</text>
+  
+  <rect x="265" y="187" width="125" height="30" rx="5" fill="#16181c" stroke="#3b3e45"/>
+  <text x="327" y="207" text-anchor="middle" fill="#8b5cf6" font-size="11">delivery proof</text>
+  <text x="402" y="207" fill="#7d848e" font-size="12">➔</text>
+  
+  <rect x="420" y="187" width="115" height="30" rx="5" fill="#16181c" stroke="#3b3e45"/>
+  <text x="477" y="207" text-anchor="middle" fill="#5fd47a" font-size="11">watch/verify</text>
+  <text x="547" y="207" fill="#7d848e" font-size="12">➔</text>
+  
+  <rect x="565" y="187" width="115" height="30" rx="5" fill="#16181c" stroke="#3b3e45"/>
+  <text x="622" y="207" text-anchor="middle" fill="#ff5a4e" font-size="11">reason code</text>
+
+  <rect x="720" y="170" width="230" height="28" rx="6" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="735" y="189" fill="#c9ced6" font-size="11">flock: one switch at a time</text>
+
+  <rect x="720" y="207" width="230" height="28" rx="6" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="735" y="226" fill="#c9ced6" font-size="11">~/.stickshift/log</text>
+
+  <!-- Paths: Engine -> Proof Layers -->
+  <path d="M 365 235 L 365 260" fill="none" stroke="#7d848e" stroke-width="1.5"/>
+  <path d="M 118 260 L 862 260" fill="none" stroke="#7d848e" stroke-width="1.5"/>
+  <path d="M 118 260 L 118 285" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 304 260 L 304 285" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 490 260 L 490 285" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 676 260 L 676 285" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 862 260 L 862 285" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+
+  <!-- ================= BAND 3: PROOF LAYERS ================= -->
+  <text x="30" y="280" font-size="11" font-weight="bold" fill="#7d848e" letter-spacing="1">PROOF LAYERS</text>
+
+  <rect x="30" y="290" width="176" height="100" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="45" y="315" font-weight="bold" fill="#c9ced6" font-size="12">AXState.m</text>
+  <text x="45" y="335" fill="#7d848e" font-size="11">pane classifier:</text>
+  <text x="45" y="350" fill="#c9ced6" font-size="11">agent/model/effort</text>
+  <text x="45" y="365" fill="#c9ced6" font-size="11">busy/dialog/composer</text>
+
+  <rect x="216" y="290" width="176" height="100" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="231" y="315" font-weight="bold" fill="#c9ced6" font-size="12">Attribution.m</text>
+  <text x="231" y="335" fill="#7d848e" font-size="11">pane-&gt;process:</text>
+  <text x="231" y="350" fill="#c9ced6" font-size="11">ttys, fg groups,</text>
+  <text x="231" y="365" fill="#c9ced6" font-size="11">tiered cwd</text>
+
+  <rect x="402" y="290" width="176" height="100" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="417" y="315" font-weight="bold" fill="#c9ced6" font-size="12">Manifest.m</text>
+  <text x="417" y="335" fill="#c9ced6" font-size="11">code signature +</text>
+  <text x="417" y="350" fill="#c9ced6" font-size="11">version qual.</text>
+
+  <rect x="588" y="290" width="176" height="100" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="603" y="315" font-weight="bold" fill="#c9ced6" font-size="12">Protocol.m</text>
+  <text x="603" y="335" fill="#c9ced6" font-size="11">per-agent switch</text>
+  <text x="603" y="350" fill="#c9ced6" font-size="11">plans + evidence</text>
+  <text x="603" y="365" fill="#c9ced6" font-size="11">needles</text>
+
+  <rect x="774" y="290" width="176" height="100" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="789" y="315" font-weight="bold" fill="#c9ced6" font-size="12">Inject.m</text>
+  <text x="789" y="335" fill="#c9ced6" font-size="11">UCKeyTranslate</text>
+  <text x="789" y="350" fill="#c9ced6" font-size="11">keycodes</text>
+
+  <!-- Paths: Proof Layers -> macOS -->
+  <path d="M 118 390 L 118 410 L 160 410 L 160 445" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 304 390 L 304 410 L 350 410 L 350 445" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 490 390 L 490 445" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 676 390 L 676 410 L 610 410 L 610 445" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+  <path d="M 862 390 L 862 410 L 810 410 L 810 445" fill="none" stroke="#7d848e" stroke-width="1.5" marker-end="url(#arrow-dim)"/>
+
+  <!-- ================= BAND 4: macOS + TARGET ================= -->
+  <text x="30" y="440" font-size="11" font-weight="bold" fill="#7d848e" letter-spacing="1">macOS + TARGET</text>
+
+  <rect x="30" y="450" width="260" height="50" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="160" y="471" text-anchor="middle" font-weight="bold" fill="#c9ced6" font-size="12">Accessibility API</text>
+  <text x="160" y="488" text-anchor="middle" fill="#7d848e" font-size="11">(read pane text)</text>
+
+  <rect x="310" y="450" width="340" height="50" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="480" y="471" text-anchor="middle" font-weight="bold" fill="#c9ced6" font-size="12">process table</text>
+  <text x="480" y="488" text-anchor="middle" fill="#7d848e" font-size="11">(sysctl)</text>
+
+  <rect x="670" y="450" width="280" height="50" rx="10" fill="#1c1e22" stroke="#0a0b0d" stroke-width="1"/>
+  <text x="810" y="471" text-anchor="middle" font-weight="bold" fill="#c9ced6" font-size="12">CGEvent taps</text>
+  <text x="810" y="488" text-anchor="middle" fill="#7d848e" font-size="11">(type keystrokes)</text>
+
+  <!-- Paths: macOS -> Terminal -->
+  <path d="M 160 500 L 160 535" fill="none" stroke="#e8a33d" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrow-amber)"/>
+  <text x="175" y="525" fill="#e8a33d" font-size="11">reads, never scrapes APIs</text>
+
+  <path d="M 810 500 L 810 535" fill="none" stroke="#e8a33d" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+  <text x="795" y="525" text-anchor="end" fill="#e8a33d" font-size="11">types /model, /effort, picker keys</text>
+
+  <!-- Terminal Plate -->
+  <rect x="30" y="540" width="920" height="60" rx="10" fill="#0a0b0d" stroke="#3b3e45" stroke-width="1.5"/>
+  <circle cx="50" cy="555" r="5" fill="#ff5a4e"/>
+  <circle cx="68" cy="555" r="5" fill="#e8a33d"/>
+  <circle cx="86" cy="555" r="5" fill="#5fd47a"/>
+  
+  <text x="50" y="582" fill="#5fd47a" font-weight="bold" font-size="14">❯</text>
+  <text x="70" y="581" fill="#c9ced6" font-size="13">Warp pane: Claude Code / Codex CLI session</text>
+
+</svg>

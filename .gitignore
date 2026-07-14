@@ -1,0 +1,15 @@
+# Personal session notes, never committed (global rule)
+handoff/
+
+# Build artifacts
+.build/
+*.o
+spikes/bin/
+
+# Local state
+.DS_Store
+.claude/claudex/
+
+# Build outputs
+bin/
+dist/
