@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="StickShift.App/StickShift.App.csproj" />
+  <Project Path="StickShift.Cli/StickShift.Cli.csproj" />
+  <Project Path="StickShift.Core.Tests/StickShift.Core.Tests.csproj" />
+  <Project Path="StickShift.Core/StickShift.Core.csproj" />
+  <Project Path="StickShift.Os/StickShift.Os.csproj" />
+  <Project Path="StickShift.Probe/StickShift.Probe.csproj" />
+</Solution>
