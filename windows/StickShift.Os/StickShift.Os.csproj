@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- UseWPF brings in System.Windows.Automation (UIAutomationClient/Types) — the UIA
+         read path. This is the OS layer per docs/WINDOWS.md; StickShift.Core stays pure. -->
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StickShift.Core\StickShift.Core.csproj" />
+  </ItemGroup>
+</Project>
