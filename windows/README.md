@@ -9,6 +9,22 @@ model, and the same `gearbox.html` — hosted verbatim in WebView2, not forked.
 > control in the gearbox drives the engine — but it has had one evening of live testing on one
 > machine. Treat it as a working spike to build on, not a hardened release. Known issues below.
 
+## What's verified in CI
+
+`.github/workflows/ci.yml` runs on every push/PR to `main`:
+
+- **macOS** job: the full `make test` suite (130+ checks).
+- **Windows** job (`windows-latest`): builds the entire solution, runs the 52 pure-core
+  checks on real Windows, and an **OS-layer smoke test** that drives the port's *actual*
+  `WindowFocus.ReadPaneState` (real UIA `TextPattern` read) and `Injector` (real
+  `SendInput`) against a live console window — proving the read path classifies a real
+  UIA read as a recognized idle pane, `Focus()` foregrounds the target, and injected
+  keystrokes deliver and read back by occurrence delta.
+
+That covers the mechanical OS pipeline (read → classify → focus → inject → verify). The
+one thing CI can't do is install and drive a real `claude`/`codex` binary's live TUI, so
+the four-step live check below still wants one human pass on a Windows box.
+
 ## Layout
 
 | Project | WINDOWS.md step | What it is |
