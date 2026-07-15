@@ -22,8 +22,18 @@ model, and the same `gearbox.html` — hosted verbatim in WebView2, not forked.
   keystrokes deliver and read back by occurrence delta.
 
 That covers the mechanical OS pipeline (read → classify → focus → inject → verify). The
-one thing CI can't do is install and drive a real `claude`/`codex` binary's live TUI, so
-the four-step live check below still wants one human pass on a Windows box.
+one thing CI can't do is install and drive a real, authenticated `claude`/`codex` binary's
+live TUI (that needs credentials CI doesn't hold), so one human pass on a Windows box is the
+final acceptance gate. It is scripted to two minutes:
+
+```powershell
+# On Windows, with an authenticated agent in a THROWAWAY, distinctively-titled WT session:
+pwsh -File windows\scripts\live-check.ps1 -Target "my-throwaway-session" -Gear 3
+```
+
+The script builds the CLI, lists what StickShift sees, dry-runs, then commits a real shift and
+proves it landed two ways (the pane's status line changed AND `~/.claude/settings.json` was
+rewritten). PASS there closes the last gap.
 
 ## Layout
 
