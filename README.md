@@ -366,11 +366,17 @@ in `AGENTS.md`. Terminals that fail gate 1 do not expose text via Accessibility 
 would need the OCR fallback; terminals that fail gate 2 drop synthetic keystrokes and
 are not drivable.
 
-**Windows** is not supported; the engine's three pillars (AX reads, CGEvent
-injection, TCC) are macOS-specific. `docs/WINDOWS.md` carries the full port
-assessment: what carries over (the classifier, protocols, and state machine are
-OS-agnostic by design), what must be rebuilt (UIA reads, SendInput, pane
-attribution), and the spike order that de-risks a port fastest.
+**Windows** has an early working port under `windows/` (see `windows/README.md`): a
+faithful C# port of the pure core, a UIA read + `SendInput` inject OS layer, and a
+WebView2 shell hosting `gearbox.html` verbatim. It shifts real Claude Code sessions on
+Windows 11 + Windows Terminal, but it is a first spike — Codex is untested on Windows,
+target attribution is by window-title substring (not the full pane-to-process
+binding), and the tray/hotkey/live-refresh shell polish is not there yet. The
+`net10.0` pure-core tests (52 checks) are green cross-platform; the Windows-only layers
+need a Windows box to verify. `docs/WINDOWS.md` carries the full port assessment and
+the hardening roadmap: what carries over (the classifier, protocols, and state machine
+are OS-agnostic by design) and what must still be rebuilt (robust UIA pane-to-process
+attribution, per-terminal qualification).
 
 ## Logging and forensics
 

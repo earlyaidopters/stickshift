@@ -1,10 +1,20 @@
 # Windows port assessment
 
-Status: **not supported today**. StickShift's engine is built on three macOS pillars
-(Accessibility pane reads, CGEvent keystroke injection, TCC-gated permissions), and
-none of them exist on Windows in the same shape. This document is the honest map for
-anyone starting the port: what carries over, what must be rebuilt, and the order that
-de-risks it fastest.
+Status: **a first working port now exists** under [`windows/`](../windows/) (see
+[`windows/README.md`](../windows/README.md)). It shifts real Claude Code sessions on
+Windows 11 + Windows Terminal and follows the recommended order below step for step:
+pure core ported verbatim, a UIA read + `SendInput` inject OS layer, and a WebView2
+shell hosting `gearbox.html` unchanged. Treat it as an early spike — one machine, one
+evening of live testing, with known gaps listed in its README (Codex path untested on
+Windows, title-substring attribution instead of the full UIA-tree + Toolhelp binding,
+no tray/hotkeys/live-refresh yet). The `net10.0` pure-core test suite (52 checks) runs
+cross-platform and is green; the Windows-only OS/app layers need a Windows box to
+verify.
+
+This document remains the honest map for hardening that port: what carried over, what
+must still be rebuilt properly, and the order that de-risks it fastest. StickShift's
+engine is built on three macOS pillars (Accessibility pane reads, CGEvent keystroke
+injection, TCC-gated permissions), and none of them exist on Windows in the same shape.
 
 ## What carries over unchanged
 
