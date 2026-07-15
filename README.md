@@ -371,9 +371,12 @@ faithful C# port of the pure core, a UIA read + `SendInput` inject OS layer, and
 WebView2 shell hosting `gearbox.html` verbatim. It shifts real Claude Code sessions on
 Windows 11 + Windows Terminal, but it is a first spike — Codex is untested on Windows,
 target attribution is by window-title substring (not the full pane-to-process
-binding), and the tray/hotkey/live-refresh shell polish is not there yet. The
-`net10.0` pure-core tests (52 checks) are green cross-platform; the Windows-only layers
-need a Windows box to verify. `docs/WINDOWS.md` carries the full port assessment and
+binding), and the tray/hotkey/live-refresh shell polish is not there yet. CI
+(`.github/workflows/ci.yml`) builds the full solution and runs the 52 pure-core checks
+plus a real UIA-read + `SendInput` OS-layer smoke test on `windows-latest`, alongside
+the macOS `make test`; the only unautomated check left is a live run against a real
+authenticated agent (scripted in `windows/scripts/live-check.ps1`).
+`docs/WINDOWS.md` carries the full port assessment and
 the hardening roadmap: what carries over (the classifier, protocols, and state machine
 are OS-agnostic by design) and what must still be rebuilt (robust UIA pane-to-process
 attribution, per-terminal qualification).

@@ -6,7 +6,9 @@ model, and the same `gearbox.html` — hosted verbatim in WebView2, not forked.
 
 > **Status: first working version — this definitely still contains bugs.**
 > It shifts real Claude Code sessions on real hardware (Windows 11 + Windows Terminal), and every
-> control in the gearbox drives the engine — but it has had one evening of live testing on one
+> control in the gearbox drives the engine. The mechanical OS pipeline (UIA read → classify →
+> focus → SendInput → verify) is now executed and gated on real Windows in CI (see below), but the
+> full live end-to-end against a real authenticated agent has had one evening of testing on one
 > machine. Treat it as a working spike to build on, not a hardened release. Known issues below.
 
 ## What's verified in CI
@@ -40,7 +42,8 @@ rewritten). PASS there closes the last gap.
 | Project | WINDOWS.md step | What it is |
 |---|---|---|
 | `StickShift.Core` | 3 | Pure logic, no OS calls: pane classifier, gear table, switch plans, per-frame decisions. Direct port of the macOS pure modules. |
-| `StickShift.Core.Tests` | 3 | 51 tests over the classifier + decision layer (real TUI fixtures, macOS and Windows frame formats). |
+| `StickShift.Core.Tests` | 3 | 52 checks over the classifier + decision layer (real TUI fixtures, macOS and Windows frame formats). |
+| `StickShift.Os.SmokeTest` | 1, 2 | Runs the real `WindowFocus`/`Injector` code against a live console window on Windows (UIA read + `SendInput` delivery, occurrence-verified). Runs in CI on `windows-latest`. |
 | `StickShift.Os` | 1, 2, 4 | UI Automation pane reader (Windows Terminal), SendInput injector (`KEYEVENTF_UNICODE`), window focus, and the fail-closed `SwitchDriver` pipeline: read → precheck → inject → verify. |
 | `StickShift.Probe` | 1 | Tiny diagnostic that dumps what UIA can read from your terminal — useful when a machine behaves differently. |
 | `StickShift.Cli` | — | `stickshift <gear> --target <title> [--commit]`, plus `--list`, `--dump`, `--clear-draft`. |
@@ -54,8 +57,12 @@ Claude Code CLI.
 ```
 cd windows
 dotnet build StickShift.Windows.slnx
-dotnet test  StickShift.Core.Tests/StickShift.Core.Tests.csproj
+dotnet run --project StickShift.Core.Tests/StickShift.Core.Tests.csproj   # 52 checks; exit 0 = pass
 ```
+
+The pure core (`StickShift.Core` + `StickShift.Core.Tests`) targets plain `net10.0` and builds/tests
+on macOS or Linux too — add `-p:EnableWindowsTargeting=true` to compile the `net10.0-windows`
+projects off Windows (they compile but can only *run* on Windows).
 
 Give your target session a recognizable title first (`/rename my claude session` inside Claude Code).
 
