@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>StickShift.App</RootNamespace>
+    <AssemblyName>StickShiftGearbox</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StickShift.Os\StickShift.Os.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Mark Kashef's gearbox.html, used VERBATIM from upstream src/app/ (linked, not copied,
+         so it can never drift from his). The Windows shell hosts it in WebView2 unmodified. -->
+    <Content Include="..\..\src\app\gearbox.html" Link="gearbox.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
