@@ -39,13 +39,14 @@ void Gate(bool cond, string name)
 
 Console.WriteLine("== os-layer smoke (real UIA read + SendInput on Windows) ==");
 
-// Render the fixture in a real console window that stays alive, titled so we can find it.
+// Render the fixture in a real console window and leave it at an INTERACTIVE cmd prompt (titled so
+// we can find it). cmd at a prompt ECHOES typed characters to its screen buffer, so a delivered
+// SendInject keystroke becomes visible to the UIA read — the same echo a live agent composer gives.
+// (A sleeping process would swallow the keystroke unseen, hiding real delivery.)
 var psi = new ProcessStartInfo
 {
-    FileName = "powershell.exe",
-    Arguments = "-NoExit -NoProfile -Command " +
-                $"\"$host.ui.RawUI.WindowTitle='{Title}'; " +
-                $"Get-Content -Raw -LiteralPath '{fixturePath}' | Write-Host; Start-Sleep 120\"",
+    FileName = "cmd.exe",
+    Arguments = $"/k title {Title} & type \"{fixturePath}\"",
     UseShellExecute = true,   // give the child its own console window
     WindowStyle = ProcessWindowStyle.Normal,
 };
