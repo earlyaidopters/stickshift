@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  macos:
+    name: macOS core (make test)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + run the deterministic suite
+        run: make test
+
+  windows:
+    name: Windows solution build + core tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build the full Windows solution
+        working-directory: windows
+        run: dotnet build StickShift.Windows.slnx -c Release
+      - name: Run the pure-core test suite (52 checks) on real Windows
+        working-directory: windows
+        run: dotnet run -c Release --project StickShift.Core.Tests/StickShift.Core.Tests.csproj
