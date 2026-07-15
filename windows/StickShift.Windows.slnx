@@ -4,5 +4,6 @@
   <Project Path="StickShift.Core.Tests/StickShift.Core.Tests.csproj" />
   <Project Path="StickShift.Core/StickShift.Core.csproj" />
   <Project Path="StickShift.Os/StickShift.Os.csproj" />
+  <Project Path="StickShift.Os.SmokeTest/StickShift.Os.SmokeTest.csproj" />
   <Project Path="StickShift.Probe/StickShift.Probe.csproj" />
 </Solution>

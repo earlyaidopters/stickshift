@@ -30,3 +30,6 @@ jobs:
       - name: Run the pure-core test suite (52 checks) on real Windows
         working-directory: windows
         run: dotnet run -c Release --project StickShift.Core.Tests/StickShift.Core.Tests.csproj
+      - name: OS-layer smoke — real UIA read + SendInput against a live console window
+        working-directory: windows
+        run: dotnet run -c Release --project StickShift.Os.SmokeTest/StickShift.Os.SmokeTest.csproj
