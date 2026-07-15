@@ -14,9 +14,9 @@ using CoreSwitch = StickShift.Core.Switch;
 //                 WindowFocus.ReadPaneState must read it via UIA and the classifier must call it a
 //                 recognized, idle, empty-composer Claude pane. This is docs/WINDOWS.md step 1,
 //                 "the whole project gates on this".
-//   INJECT (best-effort, reported): focus the window and SendInput a probe via Injector, then
-//                 re-read and check the occurrence-count delta (the engine's own delivery proof).
-//                 Reported, not gated, because a headless/service session can block SetForegroundWindow.
+//   INJECT (hard): focus the window and SendInput a probe via Injector into an interactive cmd
+//                 prompt (which echoes), then re-read and require the occurrence-count delta to rise
+//                 (the engine's own delivery proof). Confirmed to land on windows-latest.
 
 const string Title = "SS_SMOKE_PANE";
 // Pure-ASCII fixture: "Claude Code v" + "for agents" => agent=Claude; a bare "> " composer line
@@ -78,29 +78,23 @@ try
     Gate(pane.Idle, "classifier: real UIA read => idle=YES");
     Gate(pane.InputEmpty, "classifier: real UIA read => composer empty");
 
-    // INJECT (best-effort, reported): drive the real Injector; prove delivery by occurrence delta.
+    // INJECT GATE: drive the real Injector; prove delivery by the engine's own occurrence delta
+    // (an identical string already in the buffer cannot fake it — we baseline before typing).
     const string probe = "sszzprobe";
+    Gate(Injector.CanTypeText(probe), "INJECT: probe is injection-typable");
     bool focused = WindowFocus.Focus(hwnd);
     Console.WriteLine($"  [info] Focus() => {focused}; foreground='{WindowFocus.ForegroundWindowTitle()}'");
-    if (focused && Injector.CanTypeText(probe))
+    Gate(focused, "INJECT: real Focus() (AttachThreadInput + SetForegroundWindow) brought target foreground");
+    int before = CoreSwitch.OccurrencesOf(probe, WindowFocus.ReadPaneState(hwnd).PaneText ?? "");
+    WindowFocus.Focus(hwnd);
+    Injector.TypeText(probe);
+    bool landed = false;
+    for (int i = 0; i < 12 && !landed; i++)
     {
-        int before = CoreSwitch.OccurrencesOf(probe, WindowFocus.ReadPaneState(hwnd).PaneText ?? "");
-        WindowFocus.Focus(hwnd);
-        Injector.TypeText(probe);
-        bool landed = false;
-        for (int i = 0; i < 12 && !landed; i++)
-        {
-            Thread.Sleep(300);
-            landed = CoreSwitch.OccurrencesOf(probe, WindowFocus.ReadPaneState(hwnd).PaneText ?? "") > before;
-        }
-        Console.WriteLine(landed
-            ? "  [PASS] INJECT: SendInput probe delivered and read back (real keystroke path works on Windows)"
-            : "  [info] INJECT: probe not observed — this runner blocked foreground/keystroke delivery (read path still proven)");
+        Thread.Sleep(300);
+        landed = CoreSwitch.OccurrencesOf(probe, WindowFocus.ReadPaneState(hwnd).PaneText ?? "") > before;
     }
-    else
-    {
-        Console.WriteLine("  [info] INJECT: could not foreground the window on this runner; inject path not exercised (read path still proven)");
-    }
+    Gate(landed, "INJECT: real SendInput keystrokes delivered and read back (occurrence delta > 0)");
 }
 finally
 {
@@ -108,5 +102,5 @@ finally
     try { File.Delete(fixturePath); } catch { }
 }
 
-Console.WriteLine(failures == 0 ? "\nREAD-PATH SMOKE: ALL PASS" : $"\nREAD-PATH SMOKE: {failures} FAILED");
+Console.WriteLine(failures == 0 ? "\nOS-LAYER SMOKE: ALL PASS (real UIA read + SendInput on Windows)" : $"\nOS-LAYER SMOKE: {failures} FAILED");
 return failures == 0 ? 0 : 1;
