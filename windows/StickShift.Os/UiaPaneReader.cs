@@ -104,7 +104,10 @@ public static class UiaPaneReader
             if ((bool)el.GetCurrentPropertyValue(AutomationElement.IsTextPatternAvailableProperty))
             {
                 var tp = (TextPattern)el.GetCurrentPattern(TextPattern.Pattern);
-                return tp.DocumentRange.GetText(100_000);
+                // GetText(maxLen) truncates from the START, losing the live screen on long scrollback;
+                // read the full range and keep the tail (the bottom is where every check anchors).
+                var fullText = tp.DocumentRange.GetText(-1) ?? "";
+                return fullText.Length > 200_000 ? fullText[^200_000..] : fullText;
             }
         }
         catch { /* fall through */ }

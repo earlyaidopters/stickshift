@@ -66,9 +66,14 @@ public partial class GearboxWindow : Window
     public GearboxWindow(string? target)
     {
         _explicitTarget = target;
+        // In the gearbox, PULLING A GEAR *is* the confirmation (macOS app default, AppDelegate.m:47-51):
+        // auto-confirm the "Switch model?" dialog so a pull completes instead of stalling at DIALOG_OPEN
+        // mid-conversation. The CLI keeps the conservative Ask default; this app-level choice matches Mark's.
+        _cfg.DialogPolicy = DialogPolicy.Confirm;
+        _cfg.AutoAnswerEnabled = true;
         InitializeComponent();
         Loaded += OnLoaded;
-        KeyDown += (_, e) => { if (e.Key == Key.Escape) Close(); };
+        KeyDown += (_, keyEvent) => { if (keyEvent.Key == Key.Escape) Close(); };
     }
 
     async void OnLoaded(object sender, RoutedEventArgs e)
@@ -114,37 +119,48 @@ public partial class GearboxWindow : Window
     {
         System.Threading.Tasks.Task.Run(() =>
         {
-            string agent = "claude", model = "", token = "", effort = "";
+            // Empty agent (not "claude") when nothing qualifies, so the HTML shows "focus a terminal
+            // pane" with the live chip off — matching the macOS shell, instead of a fake green chip.
+            string agentKind = "", modelDisplay = "", modelToken = "", effortText = "";
             try
             {
-                string target = ResolveTarget();
-                if (!string.IsNullOrEmpty(target))
+                string targetTitle = ResolveTarget();
+                if (!string.IsNullOrEmpty(targetTitle))
                 {
-                    var h = WindowFocus.FindWindowByTitle(target);
-                    if (h != IntPtr.Zero)
+                    var targetWindow = WindowFocus.FindWindowByTitle(targetTitle);
+                    if (targetWindow != IntPtr.Zero)
                     {
-                        var st = WindowFocus.ReadActiveAgentPane(h);
-                        var deadline = DateTime.UtcNow.AddSeconds(3);
+                        var paneState = WindowFocus.ReadActiveAgentPane(targetWindow);
+                        var readDeadline = DateTime.UtcNow.AddSeconds(3);
                         while (expectModel != null
-                               && !Switch.DialogTargetMatchesExpected(st.ModelText, expectModel)
-                               && DateTime.UtcNow < deadline)
+                               && !Switch.DialogTargetMatchesExpected(paneState.ModelText, expectModel)
+                               && DateTime.UtcNow < readDeadline)
                         {
                             Thread.Sleep(200);
-                            st = WindowFocus.ReadActiveAgentPane(h);
+                            paneState = WindowFocus.ReadActiveAgentPane(targetWindow);
                         }
-                        if (st.Agent == AgentKind.Codex) agent = "codex";
-                        model = st.ModelText ?? "";
-                        effort = st.EffortText ?? "";
-                        token = TokenForModel(model);
+                        agentKind = paneState.Agent switch
+                        {
+                            AgentKind.Claude => "claude",
+                            AgentKind.Codex => "codex",
+                            _ => ""
+                        };
+                        if (paneState.Agent != AgentKind.Unknown)
+                        {
+                            modelDisplay = paneState.ModelText ?? "";
+                            effortText = paneState.EffortText ?? "";
+                            modelToken = TokenForModel(modelDisplay);
+                        }
                     }
                 }
             }
             catch { }
             Dispatcher.Invoke(async () =>
             {
-                string js = $"window.setLive({{agent:'{Esc(agent)}',model:'{Esc(model)}'," +
-                            $"token:'{Esc(token)}',effort:'{Esc(effort)}'}})";
-                await web.CoreWebView2.ExecuteScriptAsync(js);
+                string setLiveScript =
+                    $"window.setLive({{agent:{ToJsLiteral(agentKind)},model:{ToJsLiteral(modelDisplay)}," +
+                    $"token:{ToJsLiteral(modelToken)},effort:{ToJsLiteral(effortText)}}})";
+                await web.CoreWebView2.ExecuteScriptAsync(setLiveScript);
             });
         });
     }
@@ -176,80 +192,98 @@ public partial class GearboxWindow : Window
     {
         try
         {
-            using var doc = JsonDocument.Parse(e.WebMessageAsJson);
-            var name = doc.RootElement.GetProperty("name").GetString();
+            using var message = JsonDocument.Parse(e.WebMessageAsJson);
+            var messageName = message.RootElement.GetProperty("name").GetString();
 
-            if (name == "drag")
+            if (messageName == "drag")
             {
-                var h = new WindowInteropHelper(this).EnsureHandle();
+                var windowHandle = new WindowInteropHelper(this).EnsureHandle();
                 ReleaseCapture();
-                SendMessage(h, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
+                SendMessage(windowHandle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
                 return;
             }
-            if (name == "pin")
+            if (messageName == "pin")
             {
-                bool pinned = doc.RootElement.TryGetProperty("body", out var pb)
-                              && pb.TryGetProperty("pinned", out var pv) && pv.GetBoolean();
+                bool pinned = message.RootElement.TryGetProperty("body", out var pinBody)
+                              && pinBody.TryGetProperty("pinned", out var pinnedValue) && pinnedValue.GetBoolean();
                 Topmost = pinned;
                 return;
             }
-            if (name == "resize")
+            if (messageName == "resize")
             {
                 // Mark's collapse (–) hides the stage and asks the host to shrink to the header bar;
                 // honor it so the button doesn't leave dead space below a full-height frame. Expanded
                 // height mirrors the macOS shell's 760x440 content rect (AppDelegate.m).
-                bool compact = doc.RootElement.TryGetProperty("body", out var rb)
-                               && rb.TryGetProperty("compact", out var cv) && cv.GetBoolean();
-                Height = compact ? 64 : 440;
+                bool collapsed = message.RootElement.TryGetProperty("body", out var resizeBody)
+                               && resizeBody.TryGetProperty("compact", out var compactValue) && compactValue.GetBoolean();
+                Height = collapsed ? 64 : 440;
                 return;
             }
-            if (name == "policy")
+            if (messageName == "policy")
             {
-                var pol = doc.RootElement.GetProperty("body").TryGetProperty("policy", out var pp) ? pp.GetString() : null;
-                _cfg.DialogPolicy = pol switch { "ask" => DialogPolicy.Ask, "cancel" => DialogPolicy.Cancel, _ => DialogPolicy.Confirm };
-                _cfg.AutoAnswerEnabled = pol is "confirm" or "cancel";
+                var policyName = message.RootElement.GetProperty("body").TryGetProperty("policy", out var policyValue) ? policyValue.GetString() : null;
+                _cfg.DialogPolicy = policyName switch { "ask" => DialogPolicy.Ask, "cancel" => DialogPolicy.Cancel, _ => DialogPolicy.Confirm };
+                _cfg.AutoAnswerEnabled = policyName is "confirm" or "cancel";
                 return;
             }
-            if (name != "shift") return;
+            if (messageName != "shift") return;
 
-            var body = doc.RootElement.GetProperty("body");
-            string gate = body.TryGetProperty("gate", out var gp) ? gp.GetString() ?? "" : "";
+            var body = message.RootElement.GetProperty("body");
+            string gate = body.TryGetProperty("gate", out var gateProperty) ? gateProperty.GetString() ?? "" : "";
             // The UI's tuple IS the shift (Mark's runModelToken:effort: semantics): fire() sends
             // {model, effort, gate} on every action — gear pulls AND throttle-only moves (where
             // model = the live token and gate may be ''). gate is only echoed back for the glow.
-            string uiModel = body.TryGetProperty("model", out var mp) ? mp.GetString() ?? "" : "";
-            string uiEffort = body.TryGetProperty("effort", out var ep) ? ep.GetString() ?? "" : "";
-            GearTuple? tuple = uiModel.Length > 0
-                ? new GearTuple(uiModel, uiEffort.Length > 0 ? uiEffort : null)
+            string uiModelToken = body.TryGetProperty("model", out var modelProperty) ? modelProperty.GetString() ?? "" : "";
+            string uiEffortToken = body.TryGetProperty("effort", out var effortProperty) ? effortProperty.GetString() ?? "" : "";
+            GearTuple? uiTuple = uiModelToken.Length > 0
+                ? new GearTuple(uiModelToken, uiEffortToken.Length > 0 ? uiEffortToken : null)
                 : null;   // no model token (shouldn't happen — fire() guards) -> fall back to the gear table
 
             System.Threading.Tasks.Task.Run(() =>
             {
-                string target = ResolveTarget();
-                ShiftOutcome r = string.IsNullOrEmpty(target)
-                    ? new ShiftOutcome { Reason = "NOT_TERMINAL", Detail = "no Claude/Codex session found" }
-                    : SwitchDriver.Shift(target, gate, _cfg, commit: true, log: null, tupleOverride: tuple);
+                ShiftOutcome outcome;
+                try
+                {
+                    string targetTitle = ResolveTarget();
+                    outcome = string.IsNullOrEmpty(targetTitle)
+                        ? new ShiftOutcome { Reason = "NOT_TERMINAL", Detail = "no Claude/Codex session found" }
+                        : SwitchDriver.Shift(targetTitle, gate, _cfg, commit: true, log: null, tupleOverride: uiTuple);
+                }
+                catch (Exception readException)
+                {
+                    // A UIA fault must STILL resolve the HTML's pending state, or the gearbox freezes
+                    // on a phantom gear (one-outcome-per-shift contract). Deliver an error outcome.
+                    outcome = new ShiftOutcome { Reason = "READ_ERROR", Stage = "INJECT", Detail = readException.Message };
+                }
 
-                bool ok = r.Reason is "CHANGED" or "ALREADY_SET";
-                bool warn = r.Reason is "BUSY" or "DRAFT_PRESENT" or "DIALOG_OPEN" or "NOT_TERMINAL" or "NO_AGENT";
+                // Buckets mirror the macOS shell (AppDelegate.m): landed = changed/already; warnable =
+                // every refusal PLUS UNKNOWN_FINAL_STATE (committed but unverified) — so a shift that
+                // likely took doesn't render as a red error and snap the knob back to the old model.
+                bool landed = outcome.Reason is "CHANGED" or "ALREADY_SET";
+                bool warnable = outcome.Reason is "BUSY" or "DRAFT_PRESENT" or "DIALOG_OPEN" or "NOT_TERMINAL"
+                    or "NO_AGENT" or "NO_FOCUS" or "LOCKED" or "UNCHANGED" or "UNKNOWN_FINAL_STATE";
                 Dispatcher.Invoke(async () =>
                 {
-                    string js = $"window.outcome({{reason:'{Esc(r.Reason)}',detail:'{Esc(r.ToString())}'," +
-                                $"ok:{(ok ? "true" : "false")},warn:{(warn ? "true" : "false")}," +
-                                $"activeGate:'{(ok ? Esc(gate) : "")}'}})";
-                    await web.CoreWebView2.ExecuteScriptAsync(js);
+                    string outcomeScript =
+                        $"window.outcome({{reason:{ToJsLiteral(outcome.Reason)},detail:{ToJsLiteral(outcome.Detail)}," +
+                        $"ok:{(landed ? "true" : "false")},warn:{(warnable ? "true" : "false")}," +
+                        $"activeGate:{ToJsLiteral(landed ? gate : "")}}})";
+                    await web.CoreWebView2.ExecuteScriptAsync(outcomeScript);
                 });
-                // Reflect the session's real post-shift state back into the console — waiting for the
-                // footer to agree with the model this shift just verified (see PushLive).
-                if (ok)
+                // Reconcile the console/knob with the session's REAL post-shift state on ANY commit
+                // (landed, or UNKNOWN_FINAL_STATE which likely landed) — never leave the UI on the old model.
+                if (landed || outcome.Committed)
                 {
-                    string? tok = tuple?.Model ?? _cfg.TupleForGear(gate, AgentKind.Claude)?.Model;
-                    PushLive(tok != null ? ShiftProtocol.ClaudeDisplayForToken(tok) : null);
+                    string? modelToken = uiTuple?.Model ?? _cfg.TupleForGear(gate, AgentKind.Claude)?.Model;
+                    PushLive(landed && modelToken != null ? ShiftProtocol.ClaudeDisplayForToken(modelToken) : null);
                 }
             });
         }
         catch { }
     }
 
-    static string Esc(string? s) => (s ?? "").Replace("\\", "\\\\").Replace("'", "\\'");
+    // Outbound JS-literal encoder: JSON-serialize so every value reaching ExecuteScriptAsync is a
+    // properly-escaped double-quoted literal — closes newline / U+2028 / U+2029 / quote breakouts
+    // that a hand-rolled '..'-escaper misses when pane-derived text (model, detail) is untrusted.
+    static string ToJsLiteral(string? value) => System.Text.Json.JsonSerializer.Serialize(value ?? "");
 }

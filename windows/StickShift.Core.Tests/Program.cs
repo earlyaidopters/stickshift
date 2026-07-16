@@ -135,6 +135,10 @@ Check(!wc.Busy, "win claude: busy=NO");
 // draft variant: composer with text => NOT empty
 var wcDraft = Classify(WinClaudeIdle.Replace("> \n", "> build the next thing\n"));
 Check(!wcDraft.InputEmpty, "win claude draft: inputEmpty=NO (DRAFT_PRESENT)");
+// draft that BEGINS WITH a placeholder prefix must still be a draft, not empty: the old
+// StartsWith match classified "Ask Claude about X" as an empty composer and typed over it.
+var wcPlaceholderDraft = Classify(WinClaudeIdle.Replace("> \n", "> Ask Claude about the focus race\n"));
+Check(!wcPlaceholderDraft.InputEmpty, "win claude draft starting with placeholder: inputEmpty=NO (exact-match, not StartsWith)");
 
 // === Config (gear table + injection-safe charset) — port of Config.m ===
 Console.WriteLine("\n== config ==");

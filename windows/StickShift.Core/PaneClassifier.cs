@@ -240,7 +240,10 @@ public static class PaneClassifier
                     var rest = Trim(ln[markerLen..]);
                     if (rest.Length == 0) return true;                              // empty composer
                     if (rest.StartsWith("1.") || rest.StartsWith("2.")) continue;   // dialog option
-                    foreach (var ph in ClaudePlaceholders) if (rest.StartsWith(ph)) return true;
+                    // EXACT match only (like the Codex branch): a StartsWith would classify a real
+                    // draft that merely BEGINS with a placeholder ("Ask Claude about the race…") as
+                    // empty and type over it. An empty composer is already caught by rest.Length==0.
+                    foreach (var ph in ClaudePlaceholders) if (rest == ph) return true;
                     return false;                                                   // draft present
                 }
             }

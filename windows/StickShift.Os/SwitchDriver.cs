@@ -48,10 +48,31 @@ public static class SwitchDriver
             return new() { Reason = "OK", Stage = "DRY_RUN", PlanSummary = plan!.Summary, Detail = $"would apply — {plan.Summary}" };
         }
 
-        // COMMIT: focus the target window, then operate on the FOCUSED (active) pane so the pane we
-        // read is provably the pane keystrokes reach.
+        // COMMIT: serialize with an interprocess lock so a second client (CLI + GUI, or two quick
+        // pulls) can't interleave keystrokes into the same pane. Session-local mutex; fail-closed
+        // if we can't take it quickly. (WINDOWS.md step: "Named mutex (CreateMutex).")
+        using var injectionGate = new Mutex(false, "StickShiftInjectionLock");
+        bool lockAcquired;
+        try { lockAcquired = injectionGate.WaitOne(TimeSpan.FromMilliseconds(600)); }
+        catch (AbandonedMutexException) { lockAcquired = true; }   // a prior holder died mid-shift; we inherit
+        if (!lockAcquired)
+            return new() { Reason = "LOCKED", Stage = "PRECHECK", Detail = "another shift is in progress — try again" };
+        try { return CommitShift(target, gear, cfg, log, tupleOverride); }
+        finally { injectionGate.ReleaseMutex(); }
+    }
+
+    static ShiftOutcome NoFocus(string detail) => new() { Reason = "NO_FOCUS", Stage = "INJECT", Detail = detail };
+
+    // The read -> precheck -> inject -> verify pipeline, run under the injection lock. Every keystroke
+    // site re-asserts foreground AND checks it landed: if the target isn't foreground (user alt-tabbed
+    // mid-shift, or SetForegroundWindow was denied), abort with NO_FOCUS BEFORE the keystroke rather
+    // than blind-type Return/Escape/digits into whatever window now owns focus.
+    static ShiftOutcome CommitShift(IntPtr target, string gear, Config cfg, Action<string>? log, GearTuple? tupleOverride)
+    {
+        // focus the target window, then operate on the FOCUSED (active) pane so the pane we read
+        // is provably the pane keystrokes reach.
         if (!WindowFocus.Focus(target))
-            return new() { Reason = "NO_FOCUS", Stage = "INJECT", Detail = "could not bring the target window to foreground" };
+            return NoFocus("could not bring the target window to foreground");
         Thread.Sleep(150);
         log?.Invoke($"[dbg] after Focus(target): foreground='{WindowFocus.ForegroundWindowTitle()}'");
 
@@ -65,8 +86,10 @@ public static class SwitchDriver
         if (activeRefusal != null) return activeRefusal;   // ALREADY_SET / BUSY / DRAFT etc. on the active pane
         SwitchPlan plan2 = activePlan!;
 
-        // Baseline for the robust model-confirmation verify — set just before a /model is injected.
-        int modelConfirmBaseline = -1;
+        // Baselines for the robust confirmation verify — set just before a /model or /effort is
+        // injected, so the WATCH matches only a FRESH confirmation line (a stale one sits in the
+        // baseline and can't false-pass).
+        int modelConfirmBaseline = -1, effortConfirmBaseline = -1;
 
         foreach (PlanStep step in plan2.Steps)
         {
@@ -87,9 +110,12 @@ public static class SwitchDriver
                     // stale confirmation from a prior run sits in the baseline, so it can't false-pass.
                     if (typed.StartsWith("/model") && plan2.ExpectedModelDisplay != null)
                         modelConfirmBaseline = Switch.OccurrencesOf("Set model to " + plan2.ExpectedModelDisplay, paneBeforeType);
+                    if (typed.StartsWith("/effort") && plan2.ExpectedEffort != null)
+                        effortConfirmBaseline = Switch.OccurrencesOf("Set effort level to " + plan2.ExpectedEffort, paneBeforeType);
                     // The UIA read above transiently drops foreground to an empty window; re-assert it
                     // with NO UIA between here and SendInput so the keystrokes reliably reach the pane.
-                    WindowFocus.Focus(target);
+                    // Verify the re-assert: never type into a window that isn't provably foreground.
+                    if (!WindowFocus.Focus(target)) return NoFocus($"target lost foreground before typing '{typed}'");
                     log?.Invoke($"[dbg] typing '{typed}' (before-count={before}); foreground='{WindowFocus.ForegroundWindowTitle()}'");
                     Injector.TypeText(typed);
                     bool landed = false;
@@ -103,11 +129,11 @@ public static class SwitchDriver
                         return new() { Reason = "INJECT_DROPPED", Stage = "INJECT", Detail = $"typed '{typed}' but it never appeared in the focused pane — keystrokes did not reach it" };
                     break;
                 }
-                case StepKind.Return: WindowFocus.Focus(target); Injector.PressReturn(); Thread.Sleep(120); break;
-                case StepKind.Escape: WindowFocus.Focus(target); Injector.PressEscape(); Thread.Sleep(120); break;
-                case StepKind.Down: WindowFocus.Focus(target); Injector.PressDown(); Thread.Sleep(120); break;
-                case StepKind.Up: WindowFocus.Focus(target); Injector.PressUp(); Thread.Sleep(120); break;
-                case StepKind.Digit: WindowFocus.Focus(target); Injector.PressDigit(step.Digit); Thread.Sleep(120); break;
+                case StepKind.Return: if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before Return"); Injector.PressReturn(); Thread.Sleep(120); break;
+                case StepKind.Escape: if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before Escape"); Injector.PressEscape(); Thread.Sleep(120); break;
+                case StepKind.Down: if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before Down"); Injector.PressDown(); Thread.Sleep(120); break;
+                case StepKind.Up: if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before Up"); Injector.PressUp(); Thread.Sleep(120); break;
+                case StepKind.Digit: if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before Digit"); Injector.PressDigit(step.Digit); Thread.Sleep(120); break;
                 case StepKind.CodexSelect:
                 {
                     PaneState picker = WindowFocus.ReadActiveAgentPane(target);
@@ -116,12 +142,13 @@ public static class SwitchDriver
                         return new() { Reason = "BAD_CONFIG", Stage = "INJECT", Detail = $"'{step.Text}' not offered in the codex picker" };
                     if (row > 9)
                         return new() { Reason = "BAD_CONFIG", Stage = "INJECT", Detail = $"picker row {row} exceeds single-digit selection" };
-                    WindowFocus.Focus(target); Injector.PressDigit(row); Thread.Sleep(150);
+                    if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before picker select");
+                    Injector.PressDigit(row); Thread.Sleep(150);
                     break;
                 }
                 case StepKind.WaitState:
                 {
-                    ShiftOutcome? wr = AwaitStep(step, target, cfg, plan2.ExpectedModelDisplay, modelConfirmBaseline);
+                    ShiftOutcome? wr = AwaitStep(step, target, cfg, plan2.ExpectedModelDisplay, modelConfirmBaseline, effortConfirmBaseline);
                     if (wr != null) return wr;
                     break;
                 }
@@ -171,17 +198,21 @@ public static class SwitchDriver
 
     // Poll a WaitState step using the PURE Switch.DecideStep against the FOCUSED (active) pane.
     // null => Matched (success); a non-null ShiftOutcome => terminal (error / dialog / cancel / timeout).
-    static ShiftOutcome? AwaitStep(PlanStep step, IntPtr target, Config cfg, string? modelDisp = null, int modelConfirmBaseline = -1)
+    static ShiftOutcome? AwaitStep(PlanStep step, IntPtr target, Config cfg, string? modelDisp = null, int modelConfirmBaseline = -1, int effortConfirmBaseline = -1)
     {
         DateTime deadline = DateTime.UtcNow.AddSeconds(5);
         bool confirmed = false;
         while (DateTime.UtcNow < deadline)
         {
             PaneState p = WindowFocus.ReadActiveAgentPane(target);
-            // Robust model verify: a FRESH "Set model to <disp>" confirmation (count risen past the
-            // pre-injection baseline) proves the switch landed even when the status-footer read misses.
+            // Robust verify: a FRESH confirmation line (count risen past the pre-injection baseline)
+            // proves the switch landed even when the status-footer / effort-chip read misses — and,
+            // unlike a bare bottom-Contains, a stale confirmation from a prior run can't false-pass.
             if (step.ExpectModel != null && modelConfirmBaseline >= 0 && !string.IsNullOrEmpty(modelDisp)
                 && Switch.OccurrencesOf("Set model to " + modelDisp, p.PaneText) > modelConfirmBaseline)
+                return null;
+            if (step.ExpectEffort != null && effortConfirmBaseline >= 0
+                && Switch.OccurrencesOf("Set effort level to " + step.ExpectEffort, p.PaneText) > effortConfirmBaseline)
                 return null;
             StepDecision d = Switch.DecideStep(step, p, cfg.AutoAnswerEnabled, cfg.DialogPolicy, confirmed);
             switch (d)
@@ -195,10 +226,12 @@ public static class SwitchDriver
                     return new() { Reason = "DIALOG_OPEN", Stage = "WATCH",
                         Detail = "Claude asked to confirm the switch; confirm in the terminal or enable auto-confirm" };
                 case StepDecision.Cancel:
-                    WindowFocus.Focus(target); Injector.PressDigit(2);
+                    if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before dialog cancel");
+                    Injector.PressDigit(2);
                     return new() { Reason = "UNCHANGED", Stage = "WATCH", Detail = "cancelled per policy" };
                 case StepDecision.Confirm:
-                    WindowFocus.Focus(target); Injector.PressReturn(); confirmed = true; Thread.Sleep(300); continue;
+                    if (!WindowFocus.Focus(target)) return NoFocus("target lost foreground before dialog confirm");
+                    Injector.PressReturn(); confirmed = true; Thread.Sleep(300); continue;
                 case StepDecision.Wait:
                 default: break;
             }
