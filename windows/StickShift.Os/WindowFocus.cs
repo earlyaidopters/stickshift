@@ -82,7 +82,7 @@ public static class WindowFocus
             foreach (AutomationElement pane in el.FindAll(TreeScope.Descendants, cond))
             {
                 string text;
-                try { text = ((TextPattern)pane.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(100_000) ?? ""; }
+                try { var fullText = ((TextPattern)pane.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(-1) ?? ""; text = fullText.Length > 200_000 ? fullText[^200_000..] : fullText; }
                 catch { continue; }
                 if (string.IsNullOrEmpty(text)) continue;
                 var candidate = new PaneState { HasFocusedWindow = true, WindowTitle = title, PaneText = text };
@@ -111,7 +111,7 @@ public static class WindowFocus
             foreach (AutomationElement pane in el.FindAll(TreeScope.Descendants, cond))
             {
                 string text;
-                try { text = ((TextPattern)pane.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(100_000) ?? ""; }
+                try { var fullText = ((TextPattern)pane.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(-1) ?? ""; text = fullText.Length > 200_000 ? fullText[^200_000..] : fullText; }
                 catch { continue; }
                 if (string.IsNullOrEmpty(text)) continue;
                 var st = new PaneState { HasFocusedWindow = true, WindowTitle = empty.WindowTitle, PaneText = text };
@@ -146,11 +146,11 @@ public static class WindowFocus
         {
             var el = AutomationElement.FromHandle(window);
             var cond = new PropertyCondition(AutomationElement.IsTextPatternAvailableProperty, true);
-            PaneState? anyAgent = null, firstReadable = null;
+            PaneState? onScreenAny = null, anyAgent = null, firstReadable = null;
             foreach (AutomationElement pane in el.FindAll(TreeScope.Descendants, cond))
             {
                 string text;
-                try { text = ((TextPattern)pane.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(100_000) ?? ""; }
+                try { var fullText = ((TextPattern)pane.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(-1) ?? ""; text = fullText.Length > 200_000 ? fullText[^200_000..] : fullText; }
                 catch { continue; }
                 if (string.IsNullOrEmpty(text)) continue;
                 var st = new PaneState { HasFocusedWindow = true, WindowTitle = title, PaneText = text };
@@ -158,10 +158,15 @@ public static class WindowFocus
                 bool onScreen = false;
                 try { onScreen = !(bool)pane.GetCurrentPropertyValue(AutomationElement.IsOffscreenProperty); } catch { }
                 if (st.Agent != AgentKind.Unknown && onScreen) return st;   // the ACTIVE agent pane
+                if (onScreen) onScreenAny ??= st;                          // on-screen, not (yet) an agent
                 if (st.Agent != AgentKind.Unknown) anyAgent ??= st;
                 firstReadable ??= st;
             }
-            return anyAgent ?? firstReadable ?? empty;
+            // Prefer an ON-SCREEN pane (even a non-agent one -> caller refuses NO_AGENT) over an
+            // OFF-SCREEN agent: SendInput reaches only the active tab, so acting on an off-screen
+            // agent pane would type into the wrong place. The off-screen agent is a read-only last
+            // resort (dry-run/diagnostics), never the on-screen commit target.
+            return onScreenAny ?? anyAgent ?? firstReadable ?? empty;
         }
         catch { return empty; }
     }

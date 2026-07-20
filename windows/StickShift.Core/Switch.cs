@@ -84,11 +84,11 @@ public static class Switch
         // Success via classified status line (only when no dialog is open, so the dialog body
         // naming the target model can't be a false positive).
         if (step.ExpectModel != null && !p.SwitchDialogOpen && DialogTargetMatchesExpected(p.ModelText, step.ExpectModel)) return StepDecision.Matched;
-        if (step.ExpectEffort != null)
-        {
-            if (p.EffortLive && p.EffortText == step.ExpectEffort) return StepDecision.Matched; // the LIVE ◉/○ chip
-            if (bottom.Contains("Set effort level to " + step.ExpectEffort)) return StepDecision.Matched;
-        }
+        // Effort match is the LIVE chip only. The "Set effort level to <x>" confirmation is verified
+        // in the driver against a pre-injection baseline (fresh occurrence), NOT here — a bare
+        // bottom-Contains would false-pass on a stale confirmation from a prior run in scrollback.
+        if (step.ExpectEffort != null && p.EffortLive && p.EffortText == step.ExpectEffort)
+            return StepDecision.Matched;
         if (step.ExpectModel == null && step.ExpectEffort == null && step.Text != null
             && BottomLines(txt, 16).Contains(step.Text)) return StepDecision.Matched;
         // The switch-confirm dialog. Only answer OUR dialog: the extracted target must equal
