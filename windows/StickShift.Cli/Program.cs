@@ -72,26 +72,52 @@ internal static class Cli
             if (st.Agent == AgentKind.Unknown) { Console.WriteLine("NO_AGENT — active pane is not a recognized agent"); return 1; }
             if (st.Busy) { Console.WriteLine("BUSY — refusing to press Escape while the agent is running (it would interrupt)"); return 1; }
             if (st.InputEmpty) { Console.WriteLine("ALREADY_EMPTY — composer has no draft"); return 0; }
-            if (!WindowFocus.Focus(hwnd)) { Console.WriteLine("NO_FOCUS — could not bring the target to foreground"); return 1; }
-            // Backspace the draft away, one key per character (+ margin — extra backspaces on an
-            // empty composer are harmless). NOT Escape: typing "/…" opens the slash-autocomplete
-            // popup, and Esc closes that popup instead of clearing the text (observed live).
-            int draftLen = 0;
-            foreach (var raw in (st.PaneText ?? "").Replace("\r", "").Split('\n'))
+            // Serialize with the SAME interprocess lock the shift uses, so a clear-draft can't
+            // interleave keystrokes with a concurrent shift (CLI + GUI, or two pulls) into the same
+            // pane. Fail-closed if we can't take it quickly. (Matches SwitchDriver's StickShiftInjectionLock.)
+            using var injectionGate = new Mutex(false, "StickShiftInjectionLock");
+            bool lockAcquired;
+            try { lockAcquired = injectionGate.WaitOne(TimeSpan.FromMilliseconds(600)); }
+            catch (AbandonedMutexException) { lockAcquired = true; }   // a prior holder died mid-inject; inherit
+            if (!lockAcquired) { Console.WriteLine("LOCKED — another shift/clear is in progress — try again"); return 1; }
+            try
             {
-                var ln = raw.TrimEnd();
-                var lt = ln.TrimStart();
-                if (lt == ">" || lt.StartsWith("> ")) draftLen = Math.Max(draftLen, lt.Length - 1);
+                if (!WindowFocus.Focus(hwnd)) { Console.WriteLine("NO_FOCUS — could not bring the target to foreground"); return 1; }
+                // Backspace the draft away, one key per character (+ margin — extra backspaces on an
+                // empty composer are harmless). NOT Escape: typing "/…" opens the slash-autocomplete
+                // popup, and Esc closes that popup instead of clearing the text (observed live).
+                int draftLen = 0;
+                foreach (var raw in (st.PaneText ?? "").Replace("\r", "").Split('\n'))
+                {
+                    var ln = raw.TrimEnd();
+                    var lt = ln.TrimStart();
+                    if (lt == ">" || lt.StartsWith("> ")) draftLen = Math.Max(draftLen, lt.Length - 1);
+                }
+                int presses = Math.Min(draftLen + 8, 300);
+                Thread.Sleep(150);
+                // Re-assert foreground BEFORE every Backspace and ABORT if it isn't the target. A
+                // focus drop mid-loop must NOT blind-fire destructive Backspaces into whatever window
+                // now owns focus — the same fail-closed rule SwitchDriver applies to every keystroke,
+                // and it matters most here because Backspace is destructive (was: Focus() called but
+                // its bool ignored, so up to 300 backspaces could land in the wrong window).
+                for (int k = 0; k < presses; k++)
+                {
+                    if (!WindowFocus.Focus(hwnd))
+                    {
+                        Console.WriteLine($"NO_FOCUS — target lost foreground after {k} backspaces; aborted before typing into the wrong window");
+                        return 1;
+                    }
+                    Injector.PressBackspace();
+                    Thread.Sleep(15);
+                }
+                Thread.Sleep(400);
+                var after = WindowFocus.ReadActiveAgentPane(hwnd);
+                Console.WriteLine(after.InputEmpty
+                    ? $"CLEARED — composer verified empty ({presses} backspaces)"
+                    : "STILL_PRESENT — composer not empty after backspacing");
+                return after.InputEmpty ? 0 : 1;
             }
-            int presses = Math.Min(draftLen + 8, 300);
-            Thread.Sleep(150);
-            for (int k = 0; k < presses; k++) { WindowFocus.Focus(hwnd); Injector.PressBackspace(); Thread.Sleep(15); }
-            Thread.Sleep(400);
-            var after = WindowFocus.ReadActiveAgentPane(hwnd);
-            Console.WriteLine(after.InputEmpty
-                ? $"CLEARED — composer verified empty ({presses} backspaces)"
-                : "STILL_PRESENT — composer not empty after backspacing");
-            return after.InputEmpty ? 0 : 1;
+            finally { injectionGate.ReleaseMutex(); }
         }
 
         string gear = args[0];
